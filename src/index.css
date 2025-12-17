@@ -1,0 +1,151 @@
+@import "@fontsource/nunito/400.css";
+@import "@fontsource/nunito/600.css";
+@import "@fontsource/nunito/700.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LowSignal Design System - Earthy, warm, accessible */
+
+@layer base {
+  :root {
+    /* Warm off-white background */
+    --background: 45 50% 98%;
+    --foreground: 200 30% 15%;
+
+    /* Cards - slightly warmer white */
+    --card: 45 40% 99%;
+    --card-foreground: 200 30% 15%;
+
+    --popover: 45 40% 99%;
+    --popover-foreground: 200 30% 15%;
+
+    /* Primary - Earthy teal/green */
+    --primary: 160 50% 30%;
+    --primary-foreground: 45 50% 98%;
+
+    /* Secondary - Warm blue */
+    --secondary: 210 45% 25%;
+    --secondary-foreground: 45 50% 98%;
+
+    /* Muted - Warm gray */
+    --muted: 40 20% 92%;
+    --muted-foreground: 200 15% 45%;
+
+    /* Accent - Soft amber/yellow */
+    --accent: 40 95% 55%;
+    --accent-foreground: 200 30% 15%;
+
+    /* Success green */
+    --success: 145 50% 40%;
+    --success-foreground: 45 50% 98%;
+
+    /* Warning amber */
+    --warning: 35 90% 50%;
+    --warning-foreground: 200 30% 15%;
+
+    /* Destructive */
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 45 50% 98%;
+
+    --border: 40 25% 88%;
+    --input: 40 25% 88%;
+    --ring: 160 50% 30%;
+
+    --radius: 1rem;
+
+    /* Custom tokens */
+    --offline-indicator: 145 50% 40%;
+    --online-indicator: 200 80% 50%;
+    --badge-bronze: 30 60% 50%;
+    --badge-silver: 220 10% 70%;
+    --badge-gold: 45 90% 55%;
+    --streak-fire: 15 90% 55%;
+
+    /* Sidebar - not used but keeping for compatibility */
+    --sidebar-background: 45 50% 98%;
+    --sidebar-foreground: 200 30% 15%;
+    --sidebar-primary: 160 50% 30%;
+    --sidebar-primary-foreground: 45 50% 98%;
+    --sidebar-accent: 40 95% 55%;
+    --sidebar-accent-foreground: 200 30% 15%;
+    --sidebar-border: 40 25% 88%;
+    --sidebar-ring: 160 50% 30%;
+  }
+
+  .dark {
+    --background: 200 30% 10%;
+    --foreground: 45 30% 95%;
+
+    --card: 200 25% 14%;
+    --card-foreground: 45 30% 95%;
+
+    --popover: 200 25% 14%;
+    --popover-foreground: 45 30% 95%;
+
+    --primary: 160 45% 45%;
+    --primary-foreground: 200 30% 10%;
+
+    --secondary: 210 40% 35%;
+    --secondary-foreground: 45 30% 95%;
+
+    --muted: 200 20% 20%;
+    --muted-foreground: 40 15% 65%;
+
+    --accent: 40 90% 50%;
+    --accent-foreground: 200 30% 10%;
+
+    --success: 145 45% 50%;
+    --success-foreground: 200 30% 10%;
+
+    --warning: 35 85% 55%;
+    --warning-foreground: 200 30% 10%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 45 30% 95%;
+
+    --border: 200 20% 22%;
+    --input: 200 20% 22%;
+    --ring: 160 45% 45%;
+
+    --sidebar-background: 200 30% 10%;
+    --sidebar-foreground: 45 30% 95%;
+    --sidebar-primary: 160 45% 45%;
+    --sidebar-primary-foreground: 200 30% 10%;
+    --sidebar-accent: 40 90% 50%;
+    --sidebar-accent-foreground: 200 30% 10%;
+    --sidebar-border: 200 20% 22%;
+    --sidebar-ring: 160 45% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: "Nunito", system-ui, sans-serif;
+  }
+
+  /* Large touch targets for mobile */
+  button, a, input, select, textarea {
+    @apply min-h-[44px];
+  }
+}
+
+@layer utilities {
+  .touch-target {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  .offline-badge {
+    @apply bg-success/20 text-success border border-success/30;
+  }
+
+  .online-badge {
+    @apply bg-secondary/20 text-secondary border border-secondary/30;
+  }
+}

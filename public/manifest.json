@@ -1,0 +1,16 @@
+{
+  "name": "LowSignal",
+  "short_name": "LowSignal",
+  "description": "Multilingual AI Tutor for Rural Education in India",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFCF2",
+  "theme_color": "#2D6A4F",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
