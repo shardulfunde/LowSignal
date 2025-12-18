@@ -227,7 +227,7 @@ const Home = () => {
           </Link>
           
           <p className="text-[10px] text-slate-400">
-            © 2024 Education Initiative
+            © {new Date().getFullYear()} Education Initiative
           </p>
         </div>
 
