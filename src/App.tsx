@@ -7,6 +7,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
 import LearningPaths from "./pages/LearningPaths";
+import LearningTopicPage from "./pages/LearningTopicPage";
 import DoubtSolver from "./pages/DoubtSolver";
 import PDFLearning from "./pages/PDFLearning";
 import AIStudyChat from "./pages/AIStudyChat";
@@ -14,6 +15,7 @@ import TestGenerator from "./pages/TestGenerator";
 import Leaderboard from "./pages/Leaderboard";
 import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -29,12 +31,14 @@ const App = () => (
             <Route path="/home" element={<Home />} />
             <Route path="/learning-paths" element={<LearningPaths />} />
             <Route path="/learning-paths/:id" element={<LearningPaths />} />
+            <Route path="/learning/topic" element={<LearningTopicPage />} />
             <Route path="/doubt-solver" element={<DoubtSolver />} />
             <Route path="/pdf-learning" element={<PDFLearning />} />
             <Route path="/study-chat" element={<AIStudyChat />} />
             <Route path="/test-generator" element={<TestGenerator />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/community" element={<Community />} />
+            <Route path="/about" element={<About />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

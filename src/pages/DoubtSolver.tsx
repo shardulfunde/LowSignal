@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, Mic, Wifi } from "lucide-react";
 import TopBar from "@/components/TopBar";
@@ -6,6 +6,11 @@ import BottomNav from "@/components/BottomNav";
 import ChatMessage from "@/components/ChatMessage";
 import SuggestionChip from "@/components/SuggestionChip";
 import { Button } from "@/components/ui/button";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+
+const API_BASE = "https://low-signal-ai.onrender.com";
 
 const DoubtSolver = () => {
   const { language, t } = useLanguage();
@@ -28,6 +33,11 @@ const DoubtSolver = () => {
 
   const [messages, setMessages] = useState(initialMessages);
   const [inputValue, setInputValue] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const [topicInput, setTopicInput] = useState("");
+  const [doubtInput, setDoubtInput] = useState("");
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
   // Reset messages when language changes
   useEffect(() => {
@@ -57,27 +67,155 @@ const DoubtSolver = () => {
 
   const handleSend = (text?: string) => {
     const messageText = text || inputValue;
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || isStreaming) return;
 
+    // Add user message
     setMessages((prev) => [
       ...prev,
       { content: messageText, isUser: true, timestamp: "Now" },
     ]);
     setInputValue("");
 
-    // Simulate AI response
-    setTimeout(() => {
-      const response = t('aiResponses.doubt.default').replace("{0}", messageText);
+    // Add empty assistant message that we'll fill as tokens arrive
+    setMessages((prev) => [
+      ...prev,
+      { content: "", isUser: false, timestamp: "" },
+    ]);
 
+    setIsStreaming(true);
+
+    // Open SSE connection to backend stream endpoint
+    try {
+      const es = new EventSource(`${API_BASE}/chat/stream?question=${encodeURIComponent(messageText)}`);
+      eventSourceRef.current = es;
+
+      es.onmessage = (e) => {
+        const token = e.data;
+        if (!token) return;
+
+        setMessages((prev) => {
+          const msgs = [...prev];
+          // append token to last assistant message
+          const lastIdx = msgs.length - 1;
+          msgs[lastIdx] = {
+            ...msgs[lastIdx],
+            content: (msgs[lastIdx].content || "") + token,
+            timestamp: "Just now",
+          };
+          return msgs;
+        });
+      };
+
+      es.onerror = () => {
+        // When the server closes the stream EventSource often triggers onerror.
+        if (es.readyState === EventSource.CLOSED) {
+          es.close();
+        } else {
+          es.close();
+        }
+        eventSourceRef.current = null;
+        setIsStreaming(false);
+      };
+    } catch (err) {
+      console.error(err);
+      setIsStreaming(false);
       setMessages((prev) => [
         ...prev,
-        {
-          content: response,
-          isUser: false,
-          timestamp: "Just now",
-        },
+        { content: "Failed to connect to stream.", isUser: false, timestamp: "" },
       ]);
-    }, 1500);
+    }
+  };
+
+  // New: Ask using topic + doubt inputs
+  const handleAsk = () => {
+    if (!topicInput.trim() && !doubtInput.trim()) return;
+    if (isStreaming) return;
+
+    const combined = `Topic: ${topicInput.trim()}\nDoubt: ${doubtInput.trim()}`.trim();
+
+    // Add user-visible compact message
+    setMessages((prev) => [
+      ...prev,
+      { content: `Topic: ${topicInput.trim()} — Doubt: ${doubtInput.trim()}`, isUser: true, timestamp: "Now" },
+    ]);
+
+    // start streaming the combined prompt
+    // Add empty assistant message
+    setMessages((prev) => [
+      ...prev,
+      { content: "", isUser: false, timestamp: "" },
+    ]);
+
+    setIsStreaming(true);
+
+    try {
+      const es = new EventSource(`${API_BASE}/chat/stream?question=${encodeURIComponent(combined)}`);
+      eventSourceRef.current = es;
+
+      es.onmessage = (e) => {
+        const token = e.data;
+        if (!token) return;
+
+        setMessages((prev) => {
+          const msgs = [...prev];
+          const lastIdx = msgs.length - 1;
+          msgs[lastIdx] = {
+            ...msgs[lastIdx],
+            content: (msgs[lastIdx].content || "") + token,
+            timestamp: "Just now",
+          };
+          return msgs;
+        });
+      };
+
+      es.onerror = () => {
+        es.close();
+        eventSourceRef.current = null;
+        setIsStreaming(false);
+      };
+    } catch (err) {
+      console.error(err);
+      setIsStreaming(false);
+      setMessages((prev) => [
+        ...prev,
+        { content: "Failed to connect to stream.", isUser: false, timestamp: "" },
+      ]);
+    }
+  };
+
+  // Cleanup EventSource on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, []);
+
+  const stopStreaming = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setIsStreaming(false);
+    setMessages((prev) => [
+      ...prev,
+      { content: "[Streaming stopped by user]", isUser: false, timestamp: "" },
+    ]);
+  };
+
+  const copyMessage = async (idx: number) => {
+    const text = messages[idx]?.content || "";
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error("Copy failed", err);
+    }
+  };
+
+  const toggleExpand = (idx: number) => {
+    setExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
   return (
@@ -104,12 +242,50 @@ const DoubtSolver = () => {
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-48">
         <div className="max-w-lg mx-auto space-y-4">
           {messages.map((msg, index) => (
-            <ChatMessage
-              key={index}
-              content={msg.content}
-              isUser={msg.isUser}
-              timestamp={msg.timestamp}
-            />
+            <div key={index}>
+              {msg.isUser ? (
+                <ChatMessage content={msg.content} isUser={true} timestamp={msg.timestamp} />
+              ) : (
+                <div className="flex justify-start animate-slide-up">
+                  <div className="relative max-w-[85%] px-4 py-3 rounded-2xl bg-muted text-foreground rounded-bl-md">
+                      <div className="prose prose-sm max-w-none">
+                        {(() => {
+                          const full = msg.content || "";
+                          const isLong = full.length > 300;
+                          const showFull = !!expanded[index] || !isLong;
+                          const display = showFull ? full : full.slice(0, 300) + "...";
+                          return (
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                              {display}
+                            </ReactMarkdown>
+                          );
+                        })()}
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2">
+                      <button
+                        className="text-sm text-muted-foreground hover:text-foreground"
+                        onClick={() => copyMessage(index)}
+                        aria-label="Copy answer"
+                      >
+                        Copy
+                      </button>
+                        {msg.content && msg.content.length > 100 && (
+                          <button
+                        className="text-sm text-muted-foreground hover:text-foreground"
+                          onClick={() => toggleExpand(index)}
+                        >
+                          {expanded[index] ? "Collapse" : "Expand"}
+                        </button>
+                        )}
+                      {isStreaming && (
+                        <span className="text-xs text-muted-foreground">Streaming…</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -123,38 +299,67 @@ const DoubtSolver = () => {
               <SuggestionChip
                 key={index}
                 label={suggestion}
-                onClick={() => handleSend(suggestion)}
+                onClick={() => {
+                  setTopicInput(suggestion);
+                  setDoubtInput("");
+                }}
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Input Area */}
+      {/* Topic + Doubt Input Area */}
       <div className="fixed bottom-20 left-0 right-0 bg-card border-t border-border p-4">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button
-            className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0 hover:bg-muted/80 transition-colors"
-            aria-label="Voice input"
-          >
-            <Mic className="w-5 h-5 text-muted-foreground" />
-          </button>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            placeholder={t('doubtSolver.typeQuestion')}
-            className="flex-1 h-12 px-4 rounded-full bg-muted border-0 focus:ring-2 focus:ring-primary outline-none text-foreground placeholder:text-muted-foreground"
+        <div className="max-w-lg mx-auto space-y-3">
+          <div className="flex items-center gap-3">
+            <input
+              className="flex-1 p-3 border rounded-xl"
+              placeholder="Topic (e.g. Photosynthesis)"
+              value={topicInput}
+              onChange={(e) => setTopicInput(e.target.value)}
+              disabled={!isOnline}
+            />
+            <button
+              className="px-3 py-2 rounded-xl bg-muted hover:bg-muted/80"
+              onClick={() => { setTopicInput(''); setDoubtInput(''); }}
+            >
+              Clear
+            </button>
+          </div>
+
+          <textarea
+            className="w-full p-3 border rounded-xl h-28 resize-none"
+            placeholder="Describe your doubt clearly (one sentence) or paste the question/prompt here"
+            value={doubtInput}
+            onChange={(e) => setDoubtInput(e.target.value)}
             disabled={!isOnline}
           />
-          <Button
-            onClick={() => handleSend()}
-            disabled={!inputValue.trim() || !isOnline}
-            className="w-12 h-12 rounded-full p-0"
-          >
-            <Send className="w-5 h-5" />
-          </Button>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">{isStreaming ? 'Streaming answer...' : ''}</div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleAsk}
+                disabled={isStreaming || !isOnline || (!topicInput.trim() && !doubtInput.trim())}
+                className="h-12"
+              >
+                Ask
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setTopicInput(''); setDoubtInput(''); }}
+                className="h-12"
+              >
+                Reset
+              </Button>
+              {isStreaming && (
+                <Button variant="destructive" onClick={stopStreaming} className="h-12">
+                  Stop
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

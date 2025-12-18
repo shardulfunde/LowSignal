@@ -1,69 +1,85 @@
 import { useState, useEffect } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Flame, Star, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import LearningPathCard from "@/components/LearningPathCard";
 import { Button } from "@/components/ui/button";
 
-const LearningPaths = () => {
-  const { language, t } = useLanguage();
+const API_BASE = "https://low-signal-ai.onrender.com";
+
+const CreateLearningPathPage = () => {
+  const navigate = useNavigate();
+
+  const [subject, setSubject] = useState("");
+  const [age, setAge] = useState(18);
+  const [language, setLanguage] = useState<"en" | "hi" | "mr">("en");
+  const [focus, setFocus] = useState("");
+  const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  const learningPaths = [
-    {
-      id: "basic-math",
-      title: t('learningPaths.courses.basicMath'),
-      description: t('learningPaths.courses.basicMathDesc'),
-      progress: 65,
-      lessonsCompleted: 13,
-      totalLessons: 20,
-      isDownloaded: true,
-      streak: 7,
-      badges: 3,
-    },
-    {
-      id: "everyday-science",
-      title: t('learningPaths.courses.everydayScience'),
-      description: t('learningPaths.courses.everydayScienceDesc'),
-      progress: 30,
-      lessonsCompleted: 6,
-      totalLessons: 20,
-      isDownloaded: true,
-      streak: 0,
-      badges: 1,
-    },
-    {
-      id: "intro-coding",
-      title: t('learningPaths.courses.introCoding'),
-      description: t('learningPaths.courses.introCodingDesc'),
-      progress: 10,
-      lessonsCompleted: 2,
-      totalLessons: 20,
-      isDownloaded: false,
-      streak: 0,
-      badges: 0,
-    },
-    {
-      id: "english-basics",
-      title: t('learningPaths.courses.englishBasics'),
-      description: t('learningPaths.courses.englishBasicsDesc'),
-      progress: 0,
-      lessonsCompleted: 0,
-      totalLessons: 25,
-      isDownloaded: false,
-      streak: 0,
-      badges: 0,
-    },
-  ];
+  const generatePath = async () => {
+    if (!subject.trim()) {
+      alert("Please enter a subject");
+      return;
+    }
 
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/learning_path/generate/topic_list`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject: subject.trim(),
+            year_old: age,
+            preferred_language: language,
+            focus_areas: focus
+              ? focus.split(",").map((s) => s.trim())
+              : [],
 
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Backend error:", err);
+
+        const message =
+          typeof err.detail === "string"
+            ? err.detail
+            : JSON.stringify(err.detail);
+
+        alert(message || "Failed to generate learning path");
+        return;
+      }
+
+      const data = await res.json();
+
+      navigate("/learning/topic", {
+        state: {
+          subject,
+          topics: data.topics,
+          index: 0,
+          age,
+          language,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate learning path");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
@@ -76,67 +92,56 @@ const LearningPaths = () => {
     return "EN";
   };
 
-  const totalBadges = learningPaths.reduce((acc, path) => acc + path.badges, 0);
-  const currentStreak = Math.max(...learningPaths.map((p) => p.streak));
-
   return (
     <div className="min-h-screen bg-background pb-28">
-      <TopBar language={getLanguageLabel()} isOnline={isOnline} showBack title={t('learningPaths.title')} />
+      <TopBar
+        language={getLanguageLabel()}
+        isOnline={isOnline}
+        title="Create Learning Path"
+        showBack
+      />
 
-      <main className="max-w-lg mx-auto px-4 py-6">
-        {/* Stats Bar */}
-        <div className="flex items-center gap-4 p-5 rounded-2xl bg-card border-2 border-border mb-6">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
-              <Flame className="w-6 h-6 text-accent" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{currentStreak}</p>
-              <p className="text-xs text-muted-foreground font-medium">{t('home.streak')}</p>
-            </div>
-          </div>
-          <div className="w-px h-12 bg-border" />
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-              <Star className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{totalBadges}</p>
-              <p className="text-xs text-muted-foreground font-medium">{t('learningPaths.badges')}</p>
-            </div>
-          </div>
-        </div>
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        <input
+          className="w-full p-3 border rounded-xl"
+          placeholder="Subject (e.g. Kinematics)"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
 
-        {/* Encouragement + CTA */}
-        <div className="p-4 rounded-2xl bg-primary/10 border-2 border-primary/20 mb-6 flex items-center gap-3">
-          <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
-          <p className="text-sm text-foreground">
-            <span className="font-semibold">{t('learningPaths.keepGoing')}</span> {t('learningPaths.progressMessage')}
-          </p>
-        </div>
+        <input
+          type="number"
+          className="w-full p-3 border rounded-xl"
+          value={age}
+          onChange={(e) => setAge(Number(e.target.value))}
+        />
 
-        <Button className="w-full h-14 text-lg font-bold rounded-xl shadow-md mb-6">
-          {t('learningPaths.continueLearning')}
+        <select
+          className="w-full p-3 border rounded-xl"
+          value={language}
+          onChange={(e) =>
+            setLanguage(e.target.value as "en" | "hi" | "mr")
+          }
+        >
+          <option value="en">English</option>
+          <option value="hi">हिंदी</option>
+          <option value="mr">मराठी</option>
+        </select>
+
+        <input
+          className="w-full p-3 border rounded-xl"
+          placeholder="Focus areas (comma separated)"
+          value={focus}
+          onChange={(e) => setFocus(e.target.value)}
+        />
+
+        <Button
+          className="w-full h-14 text-lg font-bold"
+          onClick={generatePath}
+          disabled={loading || !isOnline}
+        >
+          {!isOnline ? "Offline" : loading ? "Generating..." : "Generate"}
         </Button>
-
-        {/* Learning Paths */}
-        <h2 className="text-lg font-bold text-foreground mb-4">{t('learningPaths.yourCourses')}</h2>
-        <div className="space-y-4">
-          {learningPaths.map((path) => (
-            <LearningPathCard
-              key={path.id}
-              id={path.id}
-              title={path.title}
-              description={path.description}
-              progress={path.progress}
-              lessonsCompleted={path.lessonsCompleted}
-              totalLessons={path.totalLessons}
-              isDownloaded={path.isDownloaded}
-              streak={path.streak}
-              badges={path.badges}
-            />
-          ))}
-        </div>
       </main>
 
       <BottomNav />
@@ -144,4 +149,4 @@ const LearningPaths = () => {
   );
 };
 
-export default LearningPaths;
+export default CreateLearningPathPage;
