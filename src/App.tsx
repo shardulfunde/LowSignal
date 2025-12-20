@@ -16,6 +16,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
+import PitchDeck from "./pages/PitchDeck";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/community" element={<Community />} />
             <Route path="/about" element={<About />} />
+            <Route path="/pitch-deck" element={<PitchDeck />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

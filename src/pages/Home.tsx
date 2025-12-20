@@ -225,6 +225,13 @@ const Home = () => {
             <Info className="w-4 h-4" />
             <span className="text-sm font-semibold">About the Team</span>
           </Link>
+          <Link
+            to="/pitch-deck"
+            className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-slate-100 shadow-sm text-slate-500 hover:text-primary hover:border-primary/20 hover:shadow-md transition-all duration-300"
+          >
+            <Info className="w-4 h-4" />
+            <span className="text-sm font-semibold">Pitch Deck</span>
+          </Link>
           
           <p className="text-[10px] text-slate-400">
             © {new Date().getFullYear()} Education Initiative

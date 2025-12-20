@@ -33,9 +33,6 @@ const LearningTopicPage = () => {
     { icon: Loader2, text: "Preparing your lesson..." },
   ];
 
-  /* ===============================
-     Fetch topic content with loading animation
-     =============================== */
   useEffect(() => {
     if (!topicName || !subject) return;
 
@@ -46,7 +43,6 @@ const LearningTopicPage = () => {
       setShowResults(false);
       setLoadingStep(0);
 
-      // Simulate loading steps
       const stepInterval = setInterval(() => {
         setLoadingStep(prev => (prev < loadingSteps.length - 1 ? prev + 1 : prev));
       }, 1200);
@@ -78,8 +74,6 @@ const LearningTopicPage = () => {
         }
 
         const data = await res.json();
-        console.log("TOPIC DATA:", data);
-
         clearInterval(stepInterval);
         setContent(data);
       } catch (err) {
@@ -94,16 +88,11 @@ const LearningTopicPage = () => {
     fetchTopic();
   }, [topicName, subject, language, age]);
 
-  /* ===============================
-     Online / Offline indicator
-     =============================== */
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
@@ -116,9 +105,6 @@ const LearningTopicPage = () => {
     return "EN";
   };
 
-  /* ===============================
-     Answer selection handler
-     =============================== */
   const handleSelectAnswer = (questionIndex: number, optionIndex: number) => {
     if (showResults) return;
     
@@ -128,9 +114,6 @@ const LearningTopicPage = () => {
     }));
   };
 
-  /* ===============================
-     Submit answers
-     =============================== */
   const handleSubmitAnswers = () => {
     const totalQuestions = content?.practice_questions?.length || 0;
     const answeredCount = Object.keys(userAnswers).length;
@@ -143,15 +126,14 @@ const LearningTopicPage = () => {
     setShowResults(true);
   };
 
-  /* ===============================
-     Calculate score
-     =============================== */
+  // --- FIXED SCORE CALCULATION ---
   const getScore = () => {
     if (!content?.practice_questions) return { correct: 0, total: 0 };
     
     let correct = 0;
     content.practice_questions.forEach((q: any, i: number) => {
-      if (userAnswers[i] === q.correct_answer) {
+      // Changed from q.correct_answer to q.correct_index
+      if (userAnswers[i] === q.correct_index) { 
         correct++;
       }
     });
@@ -162,9 +144,6 @@ const LearningTopicPage = () => {
     };
   };
 
-  /* ===============================
-     Guard: invalid navigation
-     =============================== */
   if (!topics || index === undefined || !subject) {
     return <p className="p-4">Invalid learning path</p>;
   }
@@ -193,7 +172,6 @@ const LearningTopicPage = () => {
             </span>
           </div>
           
-          {/* Progress Bar */}
           <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
@@ -201,7 +179,6 @@ const LearningTopicPage = () => {
             />
           </div>
 
-          {/* Topic Circles */}
           <div className="flex items-center gap-2 flex-wrap pt-2">
             {topics.map((topic: string, idx: number) => (
               <div
@@ -258,7 +235,7 @@ const LearningTopicPage = () => {
                 <Sparkles className="w-5 h-5 text-blue-500" />
                 Explanation
               </h2>
-              <p className="text-base text-foreground leading-relaxed">
+              <p className="text-base text-foreground leading-relaxed whitespace-pre-wrap">
                 {content.explaination}
               </p>
             </div>
@@ -279,7 +256,8 @@ const LearningTopicPage = () => {
                   <div className="space-y-2">
                     {q.options.map((opt: string, optionIndex: number) => {
                       const isSelected = userAnswers[questionIndex] === optionIndex;
-                      const isCorrect = q.correct_answer === optionIndex;
+                      // --- FIXED: Use correct_index here too ---
+                      const isCorrect = q.correct_index === optionIndex;
                       const showCorrect = showResults && isCorrect;
                       const showWrong = showResults && isSelected && !isCorrect;
 
@@ -294,7 +272,7 @@ const LearningTopicPage = () => {
                             ${showCorrect ? 'border-green-500 bg-green-50 dark:bg-green-950' : ''}
                             ${showWrong ? 'border-red-500 bg-red-50 dark:bg-red-950' : ''}
                             ${!showResults ? 'hover:border-blue-300 cursor-pointer' : 'cursor-default'}
-                            disabled:opacity-75
+                            disabled:opacity-100
                           `}
                         >
                           <div className="flex items-center gap-2">
@@ -333,7 +311,7 @@ const LearningTopicPage = () => {
             {/* Score Display */}
             {showResults && score && (
               <div className={`
-                p-6 rounded-xl border-2 text-center
+                p-6 rounded-xl border-2 text-center animate-in zoom-in-95
                 ${score.correct === score.total 
                   ? 'border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950' 
                   : 'border-yellow-500 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950'}
@@ -399,7 +377,7 @@ const LearningTopicPage = () => {
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   onClick={() => navigate("/")}
                 >
-                  Complete Learning Path 🎉
+                  Complete Path 🎉
                 </Button>
               )}
             </div>
