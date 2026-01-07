@@ -23,15 +23,6 @@ const About = () => {
       borderColor: "hover:border-violet-200"
     },
     {
-      name: "Sweta Patel",
-      role: "Frontend Developer",
-      description: "Crafting intuitive and accessible user interfaces for a seamless learning experience.",
-      linkedin: "https://www.linkedin.com/in/sweta-patel-2aa130333/",
-      icon: Layout,
-      color: "bg-pink-100 text-pink-600",
-      borderColor: "hover:border-pink-200"
-    },
-    {
       name: "Pratik Naik",
       role: "AI & Backend Developer",
       description: "Bridging the gap between complex AI logic and robust server-side architecture.",
