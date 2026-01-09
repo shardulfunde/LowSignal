@@ -17,6 +17,7 @@ import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import PitchDeck from "./pages/PitchDeck";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Onboarding />} />
             <Route path="/home" element={<Home />} />
