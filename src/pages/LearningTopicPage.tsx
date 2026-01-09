@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import { CheckCircle2, Circle, Loader2, Send, Sparkles } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Sparkles } from "lucide-react";
 
 const API_BASE = "https://low-signal-ai.onrender.com";
 
@@ -21,11 +21,9 @@ const LearningTopicPage = () => {
     practice_questions: [],
   });
 
-  // Loading = The full screen loader with steps
-  const [loading, setLoading] = useState(true);
   // Streaming = The cursor blinking effect while text is typing
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
+  // We set this to true initially so the cursor blinks immediately while waiting for the first chunk
+  const [isStreaming, setIsStreaming] = useState(true);
 
   const [userAnswers, setUserAnswers] = useState<{ [key: number]: number }>({});
   const [showResults, setShowResults] = useState(false);
@@ -37,13 +35,6 @@ const LearningTopicPage = () => {
   const totalTopics = topics?.length || 0;
   const completedTopics = index;
   const progressPercent = totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
-
-  // Loading steps animation
-  const loadingSteps = [
-    { icon: Send, text: "Sending request to AI..." },
-    { icon: Sparkles, text: "AI is generating content..." },
-    { icon: Loader2, text: "Streaming your lesson..." },
-  ];
 
   // Helper to update state and ref safely
   const updateContent = (updater: (prev: any) => any) => {
@@ -57,23 +48,15 @@ const LearningTopicPage = () => {
   useEffect(() => {
     if (!topicName || !subject) return;
 
-    let stepInterval: number | undefined;
     const controller = new AbortController();
     const signal = controller.signal;
 
     const fetchTopic = async () => {
       // 1. Reset everything
-      setLoading(true);
       setIsStreaming(true);
       updateContent(() => ({ explanation: "", practice_questions: [] }));
       setUserAnswers({});
       setShowResults(false);
-      setLoadingStep(0);
-
-      // 2. Start Loading Animation Cycle
-      stepInterval = window.setInterval(() => {
-        setLoadingStep((prev) => (prev < loadingSteps.length - 1 ? prev + 1 : prev));
-      }, 1200);
 
       try {
         const res = await fetch(`${API_BASE}/learning_path/generate/topic_detail/stream`, {
@@ -94,14 +77,11 @@ const LearningTopicPage = () => {
         if (!res.ok) throw new Error(`Server error ${res.status}`);
         if (!res.body) throw new Error("No response body");
 
-        // 3. Connection established! Stop the full screen loader, show the UI
-        setLoading(false);
-
         const reader = res.body.getReader();
         const decoder = new TextDecoder("utf-8");
         let buffered = "";
 
-        // 4. Read the stream
+        // 2. Read the stream
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
@@ -158,9 +138,7 @@ const LearningTopicPage = () => {
           alert("Failed to load topic content");
         }
       } finally {
-        setLoading(false);
         setIsStreaming(false);
-        if (stepInterval) clearInterval(stepInterval);
       }
     };
 
@@ -168,7 +146,6 @@ const LearningTopicPage = () => {
 
     return () => {
       controller.abort();
-      if (stepInterval) clearInterval(stepInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicName, subject, language, age]);
@@ -233,7 +210,6 @@ const LearningTopicPage = () => {
   }
 
   const score = showResults ? getScore() : null;
-  const LoadingIcon = loadingSteps[loadingStep].icon;
 
   return (
     <div className="min-h-screen bg-background pb-28">
@@ -271,42 +247,17 @@ const LearningTopicPage = () => {
           </div>
         </div>
 
-        {/* Loading State - Only shows during initial connection */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 space-y-6">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full border-4 border-blue-200 dark:border-blue-900" />
-              <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-t-blue-500 animate-spin" />
-              <LoadingIcon className="absolute inset-0 m-auto w-8 h-8 text-blue-500 animate-pulse" />
-            </div>
-
-            <div className="text-center space-y-2">
-              <p className="text-lg font-medium text-foreground animate-pulse">
-                {loadingSteps[loadingStep].text}
-              </p>
-              <div className="flex gap-2 justify-center">
-                {loadingSteps.map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      idx === loadingStep ? "bg-blue-500 scale-125" : idx < loadingStep ? "bg-blue-300" : "bg-gray-300"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
+        {/* Content Area - Always Visible Now */}
+        <>
             {/* Explanation - With Typing Effect */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 min-h-[150px]">
               <h2 className="font-semibold text-lg mb-2 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-blue-500" />
                 Explanation
               </h2>
               <p className="text-base text-foreground leading-relaxed whitespace-pre-wrap">
                 {content.explanation}
-                {/* The blinking cursor only shows while streaming */}
+                {/* The blinking cursor */}
                 {isStreaming && <span className="inline-block w-2 h-5 ml-1 bg-blue-500 animate-pulse align-middle"></span>}
               </p>
             </div>
@@ -450,8 +401,7 @@ const LearningTopicPage = () => {
                 </Button>
               )}
             </div>
-          </>
-        )}
+        </>
       </main>
 
       <BottomNav />
