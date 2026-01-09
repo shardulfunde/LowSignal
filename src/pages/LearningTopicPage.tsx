@@ -21,14 +21,10 @@ const LearningTopicPage = () => {
     practice_questions: [],
   });
 
-  // Streaming = The cursor blinking effect while text is typing
-  // We set this to true initially so the cursor blinks immediately while waiting for the first chunk
   const [isStreaming, setIsStreaming] = useState(true);
-
   const [userAnswers, setUserAnswers] = useState<{ [key: number]: number }>({});
   const [showResults, setShowResults] = useState(false);
 
-  // Ref to prevent stale closures inside the loop
   const contentRef = useRef<any>({ explanation: "", practice_questions: [] });
 
   const topicName = topics?.[index];
@@ -36,7 +32,6 @@ const LearningTopicPage = () => {
   const completedTopics = index;
   const progressPercent = totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
 
-  // Helper to update state and ref safely
   const updateContent = (updater: (prev: any) => any) => {
     setContent((prev: any) => {
       const newState = updater(prev);
@@ -52,7 +47,6 @@ const LearningTopicPage = () => {
     const signal = controller.signal;
 
     const fetchTopic = async () => {
-      // 1. Reset everything
       setIsStreaming(true);
       updateContent(() => ({ explanation: "", practice_questions: [] }));
       setUserAnswers({});
@@ -81,16 +75,14 @@ const LearningTopicPage = () => {
         const decoder = new TextDecoder("utf-8");
         let buffered = "";
 
-        // 2. Read the stream
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
           buffered += decoder.decode(value, { stream: true });
           
-          // SSE events are separated by double newline
           const chunks = buffered.split("\n\n");
-          buffered = chunks.pop() || ""; // Keep incomplete chunk
+          buffered = chunks.pop() || ""; 
 
           for (const chunk of chunks) {
             const trimmed = chunk.trim();
@@ -103,7 +95,6 @@ const LearningTopicPage = () => {
 
               switch (payload.type) {
                 case "explanation_chunk":
-                  // APPEND the new text chunk (Backend sends diffs)
                   updateContent((prev) => ({
                     ...prev,
                     explanation: (prev.explanation || "") + (payload.data || ""),
@@ -111,7 +102,6 @@ const LearningTopicPage = () => {
                   break;
 
                 case "question":
-                  // APPEND the new question object
                   updateContent((prev) => ({
                     ...prev,
                     practice_questions: [...(prev.practice_questions || []), payload.data],
@@ -188,7 +178,6 @@ const LearningTopicPage = () => {
     setShowResults(true);
   };
 
-  // --- SCORE CALCULATION ---
   const getScore = () => {
     if (!content?.practice_questions) return { correct: 0, total: 0 };
 
@@ -215,7 +204,9 @@ const LearningTopicPage = () => {
     <div className="min-h-screen bg-background pb-28">
       <TopBar language={getLanguageLabel()} isOnline={isOnline} title={topicName} showBack />
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
+      {/* CHANGED: max-w-lg -> max-w-4xl to make it wider on PC */}
+      <main className="w-full max-w-4xl mx-auto px-4 py-6 space-y-6">
+        
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
@@ -247,33 +238,33 @@ const LearningTopicPage = () => {
           </div>
         </div>
 
-        {/* Content Area - Always Visible Now */}
+        {/* Content Area */}
         <>
-            {/* Explanation - With Typing Effect */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 min-h-[150px]">
+            {/* Explanation - Added md:p-8 for better spacing on desktop */}
+            <div className="p-4 md:p-8 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 min-h-[150px]">
               <h2 className="font-semibold text-lg mb-2 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-blue-500" />
                 Explanation
               </h2>
-              <p className="text-base text-foreground leading-relaxed whitespace-pre-wrap">
+              <p className="text-base md:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
                 {content.explanation}
-                {/* The blinking cursor */}
                 {isStreaming && <span className="inline-block w-2 h-5 ml-1 bg-blue-500 animate-pulse align-middle"></span>}
               </p>
             </div>
 
-            {/* Practice Questions - Appears as they arrive */}
+            {/* Practice Questions */}
             {content.practice_questions && content.practice_questions.length > 0 && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <h2 className="font-semibold text-lg">Practice Questions</h2>
 
+                <div className="grid grid-cols-1 gap-4">
                 {content.practice_questions.map((q: any, questionIndex: number) => (
-                    <div key={questionIndex} className="p-4 rounded-xl border bg-card shadow-sm">
-                    <p className="font-medium mb-3">
+                    <div key={questionIndex} className="p-4 md:p-6 rounded-xl border bg-card shadow-sm">
+                    <p className="font-medium mb-4 text-lg">
                         {questionIndex + 1}. {q.question}
                     </p>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         {q.options.map((opt: string, optionIndex: number) => {
                         const isSelected = userAnswers[questionIndex] === optionIndex;
                         const isCorrect = q.correct_index === optionIndex;
@@ -286,18 +277,18 @@ const LearningTopicPage = () => {
                             onClick={() => handleSelectAnswer(questionIndex, optionIndex)}
                             disabled={showResults}
                             className={`
-                                w-full text-left p-3 rounded-lg border-2 transition-all
-                                ${!showResults && isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200"}
+                                w-full text-left p-4 rounded-lg border-2 transition-all
+                                ${!showResults && isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-gray-800"}
                                 ${showCorrect ? "border-green-500 bg-green-50 dark:bg-green-950" : ""}
                                 ${showWrong ? "border-red-500 bg-red-50 dark:bg-red-950" : ""}
                                 ${!showResults ? "hover:border-blue-300 cursor-pointer" : "cursor-default"}
                                 disabled:opacity-100
                             `}
                             >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                                 <div
                                 className={`
-                                    w-5 h-5 rounded-full border-2 flex items-center justify-center
+                                    w-5 h-5 min-w-[1.25rem] rounded-full border-2 flex items-center justify-center
                                     ${isSelected && !showResults ? "border-blue-500 bg-blue-500" : "border-gray-300"}
                                     ${showCorrect ? "border-green-500 bg-green-500" : ""}
                                     ${showWrong ? "border-red-500 bg-red-500" : ""}
@@ -305,7 +296,7 @@ const LearningTopicPage = () => {
                                 >
                                 {(isSelected || showCorrect) && <div className="w-2 h-2 rounded-full bg-white" />}
                                 </div>
-                                <span className="flex-1">{opt}</span>
+                                <span className="flex-1 text-base">{opt}</span>
                                 {showCorrect && <span className="text-green-600 font-semibold">✓</span>}
                                 {showWrong && <span className="text-red-600 font-semibold">✗</span>}
                             </div>
@@ -316,22 +307,25 @@ const LearningTopicPage = () => {
                     </div>
                 ))}
                 </div>
+                </div>
             )}
 
             {/* Submit Button */}
             {!showResults && content.practice_questions?.length > 0 && (
-              <Button 
-                className="w-full h-12 text-base font-semibold" 
-                onClick={handleSubmitAnswers}
-                disabled={isStreaming} // Don't let them submit until questions are done
-              >
-                {isStreaming ? (
-                    <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Generating Questions...
-                    </>
-                ) : "Submit Answers"}
-              </Button>
+              <div className="pt-4">
+                <Button 
+                  className="w-full h-12 text-base font-semibold" 
+                  onClick={handleSubmitAnswers}
+                  disabled={isStreaming} 
+                >
+                  {isStreaming ? (
+                      <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Generating Questions...
+                      </>
+                  ) : "Submit Answers"}
+                </Button>
+              </div>
             )}
 
             {/* Score Display */}
@@ -360,6 +354,7 @@ const LearningTopicPage = () => {
               {index > 0 && (
                 <Button
                   variant="outline"
+                  className="h-12"
                   onClick={() =>
                     navigate("/learning/topic", {
                       state: {
@@ -378,7 +373,7 @@ const LearningTopicPage = () => {
 
               {index < topics.length - 1 && (
                 <Button
-                  className="flex-1"
+                  className="flex-1 h-12"
                   onClick={() =>
                     navigate("/learning/topic", {
                       state: {
@@ -396,7 +391,7 @@ const LearningTopicPage = () => {
               )}
 
               {index === topics.length - 1 && (
-                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => navigate("/")}>
+                <Button className="flex-1 bg-green-600 hover:bg-green-700 h-12" onClick={() => navigate("/")}>
                   Complete Path 🎉
                 </Button>
               )}
