@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
-import { db } from "@/lib/firebase"; // Import db
-import { doc, getDoc, updateDoc } from "firebase/firestore"; // Import Firestore methods
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
@@ -16,17 +16,23 @@ import {
   Square, 
   Download, 
   Headphones,
-  Volume2
+  Volume2,
+  Lightbulb,
+  TrendingUp,
+  AlertCircle,
+  BarChart
 } from "lucide-react";
 
+// Use the production URL for both general API and Feedback API
 const API_BASE = "https://low-signal-ai.onrender.com";
+const FEEDBACK_API_BASE = "https://low-signal-ai.onrender.com"; 
 
 const LearningTopicPage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { currentUser } = useAuth(); // Get current user
+  const { currentUser } = useAuth();
 
-  const { pathId, subject, topics, index, age, language } = state || {}; // Get pathId from state
+  const { pathId, subject, topics, index, age, language } = state || {};
 
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
@@ -39,6 +45,10 @@ const LearningTopicPage = () => {
   const [isStreaming, setIsStreaming] = useState(true);
   const [userAnswers, setUserAnswers] = useState<{ [key: number]: number }>({});
   const [showResults, setShowResults] = useState(false);
+  
+  // Feedback State
+  const [feedback, setFeedback] = useState<any>(null);
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   
   // Audio State
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -74,19 +84,11 @@ const LearningTopicPage = () => {
         const userData = userSnap.data();
         const paths = userData.learningPaths || [];
         
-        // Find the specific learning path by ID
         const pathIndex = paths.findIndex((p: any) => p.id === pathId);
         
         if (pathIndex > -1) {
           const path = paths[pathIndex];
-          // Find the topic within that path
-          // If topics are stored as objects: find by name
-          // If stored as strings (old paths): this might need handling, but we are creating new paths with objects now.
-          // We must ensure 'path.topics' is an array of objects.
-          
           let updatedTopics = [...path.topics];
-          // Check if topics are strings (backward compatibility or migration if needed, though we just changed creation logic)
-          // Since we just changed creation to objects, we assume objects.
           
           const topicIndex = updatedTopics.findIndex((t: any) => t.name === topicName);
           
@@ -95,17 +97,12 @@ const LearningTopicPage = () => {
                ...updatedTopics[topicIndex],
                explanation: contentRef.current.explanation,
                questions: contentRef.current.practice_questions,
-               // We could also add a 'completed' status here if desired
              };
-          } else {
-             // Fallback if topic not found by name (shouldn't happen if initialized correctly)
-             console.warn("Topic not found in saved path", topicName);
           }
 
           paths[pathIndex] = { ...path, topics: updatedTopics };
           
           await updateDoc(userRef, { learningPaths: paths });
-          // console.log("Saved topic content to Firestore");
         }
       }
     } catch (err) {
@@ -125,7 +122,8 @@ const LearningTopicPage = () => {
       updateContent(() => ({ explanation: "", practice_questions: [] }));
       setUserAnswers({});
       setShowResults(false);
-      setAudioUrl(null); // Reset audio when topic changes
+      setFeedback(null); // Reset feedback
+      setAudioUrl(null);
       setIsPlaying(false);
       setAudioCurrent(0);
       setAudioDuration(0);
@@ -193,7 +191,6 @@ const LearningTopicPage = () => {
 
                 case "done":
                   setIsStreaming(false);
-                  // Trigger Save
                   saveTopicContent();
                   break;
               }
@@ -205,7 +202,6 @@ const LearningTopicPage = () => {
       } catch (err: any) {
         if (err.name !== "AbortError") {
           console.error(err);
-          alert("Failed to load topic content");
         }
       } finally {
         setIsStreaming(false);
@@ -217,7 +213,6 @@ const LearningTopicPage = () => {
     return () => {
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicName, subject, language, age]);
 
   // --- ONLINE/OFFLINE HANDLER ---
@@ -232,76 +227,35 @@ const LearningTopicPage = () => {
     };
   }, []);
 
-  // --- LANGUAGE HELPERS ---
-
-  // Display label for UI
+  // --- AUDIO LOGIC ---
   const getLanguageLabel = () => {
-    // Check first part of code (e.g. "hi" from "hi-IN")
     const code = (language || "en").split("-")[0];
-    const labels: Record<string, string> = {
-      hi: "हिंदी",
-      mr: "मराठी",
-      en: "EN"
-    };
+    const labels: Record<string, string> = { hi: "हिंदी", mr: "मराठी", en: "EN" };
     return labels[code] || "EN";
   };
 
-  // Map to AI Backend Codes
   const getTTSLanguageCode = (lang: string | undefined) => {
-    const codeMap: Record<string, string> = {
-      "hi": "hi-IN",
-      "mr": "mr-IN",
-      "en": "en-IN"
-    };
-    
+    const codeMap: Record<string, string> = { "hi": "hi-IN", "mr": "mr-IN", "en": "en-IN" };
     if (!lang) return "en-IN";
-    
-    // Check exact match
-    if (codeMap[lang]) return codeMap[lang];
-    
-    // Check short code match (e.g. input "hi-US" -> map via "hi")
     const shortCode = lang.split("-")[0];
-    if (codeMap[shortCode]) return codeMap[shortCode];
-
-    // Default fallback
-    return "en-IN";
+    return codeMap[lang] || codeMap[shortCode] || "en-IN";
   };
 
-  // --- AUDIO LOGIC ---
-  
-  // Cleanup old audio URL when component unmounts or url changes
   useEffect(() => {
-    return () => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-    };
+    return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
   }, [audioUrl]);
 
-  // Auto-play when audioUrl is updated
   useEffect(() => {
     if (audioUrl && audioRef.current) {
       audioRef.current.load();
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => setIsPlaying(true))
-          .catch(e => {
-          console.log("Auto-play prevented or failed:", e);
-          setIsPlaying(false);
-        });
-      }
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     }
   }, [audioUrl]);
 
   const generateAudio = async () => {
     const text = (contentRef.current?.explanation || content.explanation || "").trim();
-    if (!text) {
-      alert("No explanation available to generate audio.");
-      return;
-    }
-
+    if (!text) { alert("No explanation available"); return; }
     setIsGeneratingAudio(true);
-
-    // Get correct language code for backend
     const ttsLanguage = getTTSLanguageCode(language);
 
     try {
@@ -310,124 +264,105 @@ const LearningTopicPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, language: ttsLanguage }),
       });
-
       if (!res.ok) throw new Error(`TTS API error ${res.status}`);
-
-      // CHECK CONTENT TYPE to avoid "NotSupportedError"
-      const contentType = res.headers.get("content-type");
-      
-      // If server returned JSON error instead of audio
-      if (contentType && contentType.includes("application/json")) {
-         const json = await res.json();
-         console.error("TTS Server Error:", json);
-         throw new Error("Server returned an error message.");
-      }
-
       const arrayBuffer = await res.arrayBuffer();
-      
-      // Use the correct MIME type (default to mp3 if unknown, as it's most common)
-      const blobType = contentType || "audio/mpeg"; 
-      
-      const blob = new Blob([arrayBuffer], { type: blobType });
-      const url = URL.createObjectURL(blob);
-      
-      console.log(`Audio generated: ${arrayBuffer.byteLength} bytes, Type: ${blobType}, Lang: ${ttsLanguage}`);
-      setAudioUrl(url); 
-
+      const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
+      setAudioUrl(URL.createObjectURL(blob));
     } catch (err) {
       console.error(err);
-      alert("Failed to generate audio. Is the TTS server running?");
+      alert("Failed to generate audio.");
     } finally {
       setIsGeneratingAudio(false);
     }
   };
 
-  const handlePlayAudio = () => {
-    if (audioRef.current) {
-        audioRef.current.play()
-          .then(() => setIsPlaying(true))
-          .catch(e => console.error("Playback failed:", e));
-    }
-  };
-
-  const handlePauseAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  const handleStopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      try { audioRef.current.currentTime = 0; } catch (e) {}
-      setIsPlaying(false);
-      setAudioCurrent(0);
-    }
-  };
-
-  const onTimeUpdate = () => {
-    if (audioRef.current) setAudioCurrent(audioRef.current.currentTime || 0);
-  };
-
-  const onLoadedMeta = () => {
-    if (audioRef.current) setAudioDuration(audioRef.current.duration || 0);
-  };
-
+  // Audio Controls...
+  const handlePlayAudio = () => audioRef.current?.play().then(() => setIsPlaying(true));
+  const handlePauseAudio = () => { audioRef.current?.pause(); setIsPlaying(false); };
+  const handleStopAudio = () => { if(audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; setIsPlaying(false); setAudioCurrent(0); } };
+  const onTimeUpdate = () => { if(audioRef.current) setAudioCurrent(audioRef.current.currentTime); };
+  const onLoadedMeta = () => { if(audioRef.current) setAudioDuration(audioRef.current.duration); };
   const onSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!audioRef.current) return;
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const pct = Math.min(Math.max(clickX / rect.width, 0), 1);
-    const t = pct * (audioDuration || 0);
-    try { audioRef.current.currentTime = t; } catch (err) {}
+    const t = (Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1)) * (audioDuration || 0);
+    audioRef.current.currentTime = t;
     setAudioCurrent(t);
   };
-
   const formatTime = (s: number) => {
     if (!isFinite(s) || s <= 0) return "0:00";
-    const mins = Math.floor(s / 60);
-    const secs = Math.floor(s % 60).toString().padStart(2, "0");
-    return `${mins}:${secs}`;
+    return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, "0")}`;
   };
 
-  // --- QUIZ LOGIC ---
+  // --- QUIZ & FEEDBACK LOGIC ---
+
+  const generateAIFeedback = async (
+    allQs: any[],
+    userAns: { [key: number]: number }
+  ) => {
+    setIsFeedbackLoading(true);
+
+    // 1. Prepare Data for Pydantic Schema
+    // Attach selected_index to every question
+    const formattedQuestions = allQs.map((q, idx) => ({
+      question: q.question,
+      options: q.options,
+      correct_index: q.correct_index,
+      selected_index: userAns[idx] !== undefined ? userAns[idx] : -1 // -1 or null
+    }));
+
+    const correctQs = formattedQuestions.filter(q => q.selected_index === q.correct_index);
+    const incorrectQs = formattedQuestions.filter(q => q.selected_index !== q.correct_index);
+
+    try {
+      const response = await fetch(`${FEEDBACK_API_BASE}/generate_feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: topicName || "General Topic",
+          questions: formattedQuestions,
+          correct_questions: correctQs,
+          incorrect_questions: incorrectQs
+        })
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch feedback");
+      
+      const data = await response.json();
+      setFeedback(data);
+    } catch (error) {
+      console.error("Feedback generation error:", error);
+    } finally {
+      setIsFeedbackLoading(false);
+    }
+  };
 
   const handleSelectAnswer = (questionIndex: number, optionIndex: number) => {
     if (showResults) return;
-
-    setUserAnswers((prev) => ({
-      ...prev,
-      [questionIndex]: optionIndex,
-    }));
+    setUserAnswers((prev) => ({ ...prev, [questionIndex]: optionIndex }));
   };
 
   const handleSubmitAnswers = () => {
     const totalQuestions = content?.practice_questions?.length || 0;
-    const answeredCount = Object.keys(userAnswers).length;
-
-    if (answeredCount < totalQuestions) {
-      alert(`Please answer all ${totalQuestions} questions before submitting.`);
+    if (Object.keys(userAnswers).length < totalQuestions) {
+      alert(`Please answer all ${totalQuestions} questions.`);
       return;
     }
-
     setShowResults(true);
+    
+    // Trigger AI Feedback Generation
+    if (content.practice_questions) {
+      generateAIFeedback(content.practice_questions, userAnswers);
+    }
   };
 
   const getScore = () => {
     if (!content?.practice_questions) return { correct: 0, total: 0 };
-
     let correct = 0;
     content.practice_questions.forEach((q: any, i: number) => {
-      if (userAnswers[i] === q.correct_index) {
-        correct++;
-      }
+      if (userAnswers[i] === q.correct_index) correct++;
     });
-
-    return {
-      correct,
-      total: content.practice_questions.length,
-    };
+    return { correct, total: content.practice_questions.length };
   };
 
   if (!topics || index === undefined || !subject) {
@@ -440,310 +375,231 @@ const LearningTopicPage = () => {
     <div className="min-h-screen bg-background pb-28">
       <TopBar language={getLanguageLabel()} isOnline={isOnline} title={topicName} showBack />
 
-      {/* CHANGED: max-w-lg -> max-w-4xl to make it wider on PC */}
       <main className="w-full max-w-4xl mx-auto px-4 py-6 space-y-6">
         
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-muted-foreground">
-              Progress: Topic {index + 1} of {totalTopics}
-            </span>
+            <span className="font-medium text-muted-foreground">Progress: Topic {index + 1} of {totalTopics}</span>
             <span className="font-semibold text-primary">{Math.round(progressPercent)}%</span>
           </div>
-
           <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
-              style={{ width: `${progressPercent}%` }}
-            />
+            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }} />
           </div>
-
           <div className="flex items-center gap-2 flex-wrap pt-2">
             {topics.map((topic: string, idx: number) => (
-              <div key={idx} className="flex items-center gap-1" title={topic}>
-                {idx < index ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                ) : idx === index ? (
-                  <Circle className="w-5 h-5 text-blue-500 fill-blue-500" />
-                ) : (
-                  <Circle className="w-5 h-5 text-gray-300" />
-                )}
+              <div key={idx} className="flex items-center gap-1">
+                {idx < index ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : idx === index ? <Circle className="w-5 h-5 text-blue-500 fill-blue-500" /> : <Circle className="w-5 h-5 text-gray-300" />}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Content Area */}
-        <>
-            {/* Explanation */}
-            <div className="p-4 md:p-8 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 min-h-[150px]">
-              <h2 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-500" />
-                Explanation
-              </h2>
-              <p className="text-base md:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
-                {content.explanation}
-                {isStreaming && <span className="inline-block w-2 h-5 ml-1 bg-blue-500 animate-pulse align-middle"></span>}
-              </p>
-              
-              <div className="mt-8 border-t border-blue-200 dark:border-blue-800 pt-6">
-                {!audioUrl ? (
-                  <Button
-                    onClick={generateAudio}
-                    disabled={isGeneratingAudio || isStreaming || !content.explanation}
-                    className="h-12 w-full sm:w-auto bg-white hover:bg-gray-50 text-blue-600 border border-blue-200 shadow-sm"
-                    variant="outline"
-                  >
-                    {isGeneratingAudio ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Generating audio...
-                      </>
-                    ) : (
-                      <>
-                        <Headphones className="w-4 h-4 mr-2" />
-                        Listen to Explanation
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  // IMPROVED AUDIO PLAYER UI
-                  <div className="bg-white dark:bg-slate-900 rounded-xl border p-4 shadow-sm flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                       <div className="flex items-center gap-2">
-                          <Volume2 className="w-4 h-4 text-blue-500" />
-                          <span className="text-sm font-medium text-foreground">Audio Explanation ({getLanguageLabel()})</span>
-                       </div>
-                       <div className="text-xs font-mono text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                          {formatTime(audioCurrent)} / {formatTime(audioDuration)}
-                       </div>
+        {/* Explanation Section */}
+        <div className="p-4 md:p-8 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 min-h-[150px]">
+          <h2 className="font-semibold text-lg mb-2 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-blue-500" /> Explanation
+          </h2>
+          <p className="text-base md:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
+            {content.explanation}
+            {isStreaming && <span className="inline-block w-2 h-5 ml-1 bg-blue-500 animate-pulse align-middle"></span>}
+          </p>
+          
+          <div className="mt-8 border-t border-blue-200 dark:border-blue-800 pt-6">
+            {!audioUrl ? (
+              <Button onClick={generateAudio} disabled={isGeneratingAudio || isStreaming || !content.explanation} className="h-12 w-full sm:w-auto bg-white hover:bg-gray-50 text-blue-600 border border-blue-200 shadow-sm" variant="outline">
+                {isGeneratingAudio ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating audio...</> : <><Headphones className="w-4 h-4 mr-2" /> Listen to Explanation</>}
+              </Button>
+            ) : (
+              // Audio Player UI (Same as before)
+              <div className="bg-white dark:bg-slate-900 rounded-xl border p-4 shadow-sm flex flex-col gap-3">
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2"><Volume2 className="w-4 h-4 text-blue-500" /><span className="text-sm font-medium">Audio Explanation ({getLanguageLabel()})</span></div>
+                    <div className="text-xs font-mono text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{formatTime(audioCurrent)} / {formatTime(audioDuration)}</div>
+                 </div>
+                 <div className="w-full h-4 relative cursor-pointer group flex items-center" onClick={onSeek}>
+                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                       <div className="h-full bg-blue-500 rounded-full transition-all duration-100 ease-out" style={{ width: `${(audioDuration ? (audioCurrent / audioDuration) : 0) * 100}%` }} />
                     </div>
-
-                    {/* Progress Bar */}
-                    <div 
-                        className="w-full h-4 relative cursor-pointer group flex items-center"
-                        onClick={onSeek}
-                    >
-                        {/* Background Track */}
-                        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                             {/* Filled Track */}
-                            <div 
-                                className="h-full bg-blue-500 rounded-full transition-all duration-100 ease-out"
-                                style={{ width: `${(audioDuration ? (audioCurrent / audioDuration) : 0) * 100}%` }}
-                            />
-                        </div>
-                        
-                        {/* Thumb (Visible on hover or drag - simulated position) */}
-                        <div 
-                            className="absolute h-3.5 w-3.5 bg-blue-600 rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 pointer-events-none transform -translate-x-1/2"
-                            style={{ left: `${(audioDuration ? (audioCurrent / audioDuration) : 0) * 100}%` }}
-                        />
+                    <div className="absolute h-3.5 w-3.5 bg-blue-600 rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 pointer-events-none transform -translate-x-1/2" style={{ left: `${(audioDuration ? (audioCurrent / audioDuration) : 0) * 100}%` }} />
+                 </div>
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Button size="icon" className="rounded-full w-10 h-10 bg-blue-600" onClick={isPlaying ? handlePauseAudio : handlePlayAudio}>{isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}</Button>
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-red-50 hover:text-red-500" onClick={handleStopAudio}><Square className="w-4 h-4 fill-current" /></Button>
                     </div>
-
-                    {/* Controls */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                             {!isPlaying ? (
-                                <Button 
-                                    size="icon" 
-                                    className="rounded-full w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white" 
-                                    onClick={handlePlayAudio}
-                                >
-                                    <Play className="w-5 h-5 ml-0.5" />
-                                </Button>
-                             ) : (
-                                <Button 
-                                    size="icon" 
-                                    className="rounded-full w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white" 
-                                    onClick={handlePauseAudio}
-                                >
-                                    <Pause className="w-5 h-5" />
-                                </Button>
-                             )}
-
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="rounded-full hover:bg-red-50 hover:text-red-500"
-                                onClick={handleStopAudio}
-                             >
-                                <Square className="w-4 h-4 fill-current" />
-                             </Button>
-                        </div>
-
-                        <a
-                          href={audioUrl}
-                          download={`${topicName || "explanation"}.mp3`}
-                          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-muted-foreground hover:text-foreground transition-colors"
-                          title="Download Audio"
-                        >
-                          <Download className="w-5 h-5" />
-                        </a>
-                    </div>
-                  </div>
-                )}
+                    <a href={audioUrl} download={`${topicName || "explanation"}.mp3`} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-muted-foreground"><Download className="w-5 h-5" /></a>
+                 </div>
               </div>
-                
-                {/* Audio Element */}
-                <audio
-                  ref={audioRef}
-                  src={audioUrl || ""}
-                  onEnded={() => { console.log("Audio finished"); setIsPlaying(false); }}
-                  onError={(e) => console.error("Audio error event:", e)}
-                  onTimeUpdate={onTimeUpdate}
-                  onLoadedMetadata={onLoadedMeta}
-                  className="hidden"
-                />
+            )}
+            <audio ref={audioRef} src={audioUrl || ""} onEnded={() => setIsPlaying(false)} onTimeUpdate={onTimeUpdate} onLoadedMetadata={onLoadedMeta} className="hidden" />
+          </div>
+        </div>
+
+        {/* Practice Questions */}
+        {content.practice_questions && content.practice_questions.length > 0 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <h2 className="font-semibold text-lg">Practice Questions</h2>
+            <div className="grid grid-cols-1 gap-4">
+            {content.practice_questions.map((q: any, questionIndex: number) => (
+                <div key={questionIndex} className="p-4 md:p-6 rounded-xl border bg-card shadow-sm">
+                <p className="font-medium mb-4 text-lg">{questionIndex + 1}. {q.question}</p>
+                <div className="space-y-3">
+                    {q.options.map((opt: string, optionIndex: number) => {
+                    const isSelected = userAnswers[questionIndex] === optionIndex;
+                    const isCorrect = q.correct_index === optionIndex;
+                    const showCorrect = showResults && isCorrect;
+                    const showWrong = showResults && isSelected && !isCorrect;
+                    return (
+                        <button key={optionIndex} onClick={() => handleSelectAnswer(questionIndex, optionIndex)} disabled={showResults}
+                        className={`w-full text-left p-4 rounded-lg border-2 transition-all 
+                            ${!showResults && isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-gray-800"} 
+                            ${showCorrect ? "border-green-500 bg-green-50 dark:bg-green-950" : ""} 
+                            ${showWrong ? "border-red-500 bg-red-50 dark:bg-red-950" : ""}
+                            ${!showResults ? "hover:border-blue-300 cursor-pointer" : "cursor-default"}`}
+                        >
+                        <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 min-w-[1.25rem] rounded-full border-2 flex items-center justify-center 
+                            ${isSelected && !showResults ? "border-blue-500 bg-blue-500" : "border-gray-300"}
+                            ${showCorrect ? "border-green-500 bg-green-500" : ""} ${showWrong ? "border-red-500 bg-red-500" : ""}`}>
+                            {(isSelected || showCorrect) && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                            <span className="flex-1 text-base">{opt}</span>
+                            {showCorrect && <span className="text-green-600 font-semibold">✓</span>}
+                            {showWrong && <span className="text-red-600 font-semibold">✗</span>}
+                        </div>
+                        </button>
+                    );
+                    })}
+                </div>
+                </div>
+            ))}
+            </div>
+            </div>
+        )}
+
+        {/* Submit Button */}
+        {!showResults && content.practice_questions?.length > 0 && (
+          <div className="pt-4">
+            <Button className="w-full h-12 text-base font-semibold" onClick={handleSubmitAnswers} disabled={isStreaming}>
+              {isStreaming ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating Questions...</> : "Submit Answers"}
+            </Button>
+          </div>
+        )}
+
+        {/* Score & FEEDBACK Display */}
+        {showResults && score && (
+          <div className="space-y-6">
+            
+            {/* 1. Score Card */}
+            <div className={`p-6 rounded-xl border-2 text-center animate-in zoom-in-95 ${score.correct === score.total ? "border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950" : "border-yellow-500 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950"}`}>
+              <p className="text-3xl font-bold mb-2">{score.correct} / {score.total}</p>
+              <p className="text-base text-muted-foreground">{score.correct === score.total ? "Perfect! You got all answers correct! 🎉" : `You got ${score.correct} out of ${score.total} correct`}</p>
             </div>
 
-            {/* Practice Questions */}
-            {content.practice_questions && content.practice_questions.length > 0 && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <h2 className="font-semibold text-lg">Practice Questions</h2>
+            {/* 2. AI Feedback Section */}
+            {isFeedbackLoading ? (
+              <div className="p-8 rounded-xl border bg-card text-center space-y-3">
+                <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" />
+                <p className="font-medium">Analyze your performance with AI...</p>
+                <p className="text-sm text-muted-foreground">Identifying strengths and weaknesses.</p>
+              </div>
+            ) : feedback ? (
+              <div className="rounded-xl border bg-white dark:bg-card shadow-sm overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
+                
+                {/* Header */}
+                <div className="p-4 border-b bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
+                    <h3 className="font-semibold flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-purple-600" /> AI Performance Analysis
+                    </h3>
+                    <span className="text-xs font-bold px-2 py-1 rounded bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-700">
+                        Level: {feedback.understanding_level}
+                    </span>
+                </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                {content.practice_questions.map((q: any, questionIndex: number) => (
-                    <div key={questionIndex} className="p-4 md:p-6 rounded-xl border bg-card shadow-sm">
-                    <p className="font-medium mb-4 text-lg">
-                        {questionIndex + 1}. {q.question}
+                <div className="p-6 space-y-6">
+                    {/* General Summary */}
+                    <p className="text-foreground leading-relaxed italic border-l-4 border-purple-400 pl-4 py-1">
+                        "{feedback.feedback}"
                     </p>
 
-                    <div className="space-y-3">
-                        {q.options.map((opt: string, optionIndex: number) => {
-                        const isSelected = userAnswers[questionIndex] === optionIndex;
-                        const isCorrect = q.correct_index === optionIndex;
-                        const showCorrect = showResults && isCorrect;
-                        const showWrong = showResults && isSelected && !isCorrect;
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Strengths */}
+                        <div className="space-y-2">
+                            <h4 className="font-medium flex items-center gap-2 text-green-600 dark:text-green-400">
+                                <TrendingUp className="w-4 h-4" /> Strong Concepts
+                            </h4>
+                            {feedback.strengths.length > 0 ? (
+                                <ul className="space-y-2">
+                                    {feedback.strengths.map((str: string, i: number) => (
+                                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                            <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                                            {str}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : <p className="text-sm text-muted-foreground">Keep practicing to build strengths!</p>}
+                        </div>
 
-                        return (
-                            <button
-                            key={optionIndex}
-                            onClick={() => handleSelectAnswer(questionIndex, optionIndex)}
-                            disabled={showResults}
-                            className={`
-                                w-full text-left p-4 rounded-lg border-2 transition-all
-                                ${!showResults && isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-gray-800"}
-                                ${showCorrect ? "border-green-500 bg-green-50 dark:bg-green-950" : ""}
-                                ${showWrong ? "border-red-500 bg-red-50 dark:bg-red-950" : ""}
-                                ${!showResults ? "hover:border-blue-300 cursor-pointer" : "cursor-default"}
-                                disabled:opacity-100
-                            `}
-                            >
-                            <div className="flex items-center gap-3">
-                                <div
-                                className={`
-                                    w-5 h-5 min-w-[1.25rem] rounded-full border-2 flex items-center justify-center
-                                    ${isSelected && !showResults ? "border-blue-500 bg-blue-500" : "border-gray-300"}
-                                    ${showCorrect ? "border-green-500 bg-green-500" : ""}
-                                    ${showWrong ? "border-red-500 bg-red-500" : ""}
-                                `}
-                                >
-                                {(isSelected || showCorrect) && <div className="w-2 h-2 rounded-full bg-white" />}
-                                </div>
-                                <span className="flex-1 text-base">{opt}</span>
-                                {showCorrect && <span className="text-green-600 font-semibold">✓</span>}
-                                {showWrong && <span className="text-red-600 font-semibold">✗</span>}
-                            </div>
-                            </button>
-                        );
-                        })}
+                        {/* Weaknesses */}
+                        <div className="space-y-2">
+                            <h4 className="font-medium flex items-center gap-2 text-red-600 dark:text-red-400">
+                                <AlertCircle className="w-4 h-4" /> Focus Areas
+                            </h4>
+                            {feedback.weaknesses.length > 0 ? (
+                                <ul className="space-y-2">
+                                    {feedback.weaknesses.map((wk: string, i: number) => (
+                                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                            <BarChart className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                                            {wk}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : <p className="text-sm text-muted-foreground">No major weaknesses detected. Great job!</p>}
+                        </div>
                     </div>
-                    </div>
-                ))}
+
+                    {/* Suggestions */}
+                    {feedback.suggestions.length > 0 && (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                            <h4 className="font-medium flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-3">
+                                <Lightbulb className="w-4 h-4" /> Recommended Next Steps
+                            </h4>
+                            <ul className="grid grid-cols-1 gap-2">
+                                {feedback.suggestions.map((sugg: string, i: number) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm text-blue-800 dark:text-blue-200">
+                                        <span className="font-bold">•</span> {sugg}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
-                </div>
-            )}
-
-            {/* Submit Button */}
-            {!showResults && content.practice_questions?.length > 0 && (
-              <div className="pt-4">
-                <Button 
-                  className="w-full h-12 text-base font-semibold" 
-                  onClick={handleSubmitAnswers}
-                  disabled={isStreaming} 
-                >
-                  {isStreaming ? (
-                      <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Generating Questions...
-                      </>
-                  ) : "Submit Answers"}
-                </Button>
               </div>
-            )}
+            ) : null}
+          </div>
+        )}
 
-            {/* Score Display */}
-            {showResults && score && (
-              <div
-                className={`p-6 rounded-xl border-2 text-center animate-in zoom-in-95 ${
-                  score.correct === score.total
-                    ? "border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950"
-                    : "border-yellow-500 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950"
-                }`}
-              >
-                <p className="text-3xl font-bold mb-2">
-                  {score.correct} / {score.total}
-                </p>
-                <p className="text-base text-muted-foreground">
-                  {score.correct === score.total ? "Perfect! You got all answers correct! 🎉" : `You got ${score.correct} out of ${score.total} correct`}
-                </p>
-                {score.correct === score.total && (
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-2">Ready to move to the next topic!</p>
-                )}
-              </div>
-            )}
+        {/* Navigation */}
+        <div className="flex gap-3 pt-4">
+          {index > 0 && (
+            <Button variant="outline" className="h-12" onClick={() => navigate("/learning/topic", { state: { pathId, subject, topics, index: index - 1, age, language } })}>
+              ← Previous
+            </Button>
+          )}
 
-            {/* Navigation */}
-            <div className="flex gap-3 pt-4">
-              {index > 0 && (
-                <Button
-                  variant="outline"
-                  className="h-12"
-                  onClick={() =>
-                    navigate("/learning/topic", {
-                      state: {
-                        pathId,
-                        subject,
-                        topics,
-                        index: index - 1,
-                        age,
-                        language,
-                      },
-                    })
-                  }
-                >
-                  ← Previous
-                </Button>
-              )}
+          {index < topics.length - 1 && (
+            <Button className="flex-1 h-12" onClick={() => navigate("/learning/topic", { state: { pathId, subject, topics, index: index + 1, age, language } })}>
+              Next Topic →
+            </Button>
+          )}
 
-              {index < topics.length - 1 && (
-                <Button
-                  className="flex-1 h-12"
-                  onClick={() =>
-                    navigate("/learning/topic", {
-                      state: {
-                        pathId,
-                        subject,
-                        topics,
-                        index: index + 1,
-                        age,
-                        language,
-                      },
-                    })
-                  }
-                >
-                  Next Topic →
-                </Button>
-              )}
-
-              {index === topics.length - 1 && (
-                <Button className="flex-1 bg-green-600 hover:bg-green-700 h-12" onClick={() => navigate("/profile")}>
-                  Complete Path 🎉
-                </Button>
-              )}
-            </div>
-        </>
+          {index === topics.length - 1 && (
+            <Button className="flex-1 bg-green-600 hover:bg-green-700 h-12" onClick={() => navigate("/profile")}>
+              Complete Path 🎉
+            </Button>
+          )}
+        </div>
       </main>
 
       <BottomNav />
