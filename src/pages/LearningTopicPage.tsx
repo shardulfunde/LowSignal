@@ -3,7 +3,18 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import { CheckCircle2, Circle, Loader2, Sparkles } from "lucide-react";
+import { 
+  CheckCircle2, 
+  Circle, 
+  Loader2, 
+  Sparkles, 
+  Play, 
+  Pause, 
+  Square, 
+  Download, 
+  Headphones,
+  Volume2
+} from "lucide-react";
 
 const API_BASE = "https://low-signal-ai.onrender.com";
 
@@ -24,6 +35,14 @@ const LearningTopicPage = () => {
   const [isStreaming, setIsStreaming] = useState(true);
   const [userAnswers, setUserAnswers] = useState<{ [key: number]: number }>({});
   const [showResults, setShowResults] = useState(false);
+  
+  // Audio State
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioCurrent, setAudioCurrent] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
 
   const contentRef = useRef<any>({ explanation: "", practice_questions: [] });
 
@@ -40,6 +59,7 @@ const LearningTopicPage = () => {
     });
   };
 
+  // --- TOPIC STREAMING LOGIC ---
   useEffect(() => {
     if (!topicName || !subject) return;
 
@@ -51,6 +71,10 @@ const LearningTopicPage = () => {
       updateContent(() => ({ explanation: "", practice_questions: [] }));
       setUserAnswers({});
       setShowResults(false);
+      setAudioUrl(null); // Reset audio when topic changes
+      setIsPlaying(false);
+      setAudioCurrent(0);
+      setAudioDuration(0);
 
       try {
         const res = await fetch(`${API_BASE}/learning_path/generate/topic_detail/stream`, {
@@ -140,6 +164,7 @@ const LearningTopicPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicName, subject, language, age]);
 
+  // --- ONLINE/OFFLINE HANDLER ---
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -151,11 +176,166 @@ const LearningTopicPage = () => {
     };
   }, []);
 
+  // --- LANGUAGE HELPERS ---
+
+  // Display label for UI
   const getLanguageLabel = () => {
-    if (language === "hi") return "हिंदी";
-    if (language === "mr") return "मराठी";
-    return "EN";
+    // Check first part of code (e.g. "hi" from "hi-IN")
+    const code = (language || "en").split("-")[0];
+    const labels: Record<string, string> = {
+      hi: "हिंदी",
+      mr: "मराठी",
+      en: "EN"
+    };
+    return labels[code] || "EN";
   };
+
+  // Map to AI Backend Codes
+  const getTTSLanguageCode = (lang: string | undefined) => {
+    const codeMap: Record<string, string> = {
+      "hi": "hi-IN",
+      "mr": "mr-IN",
+      "en": "en-IN"
+    };
+    
+    if (!lang) return "en-IN";
+    
+    // Check exact match
+    if (codeMap[lang]) return codeMap[lang];
+    
+    // Check short code match (e.g. input "hi-US" -> map via "hi")
+    const shortCode = lang.split("-")[0];
+    if (codeMap[shortCode]) return codeMap[shortCode];
+
+    // Default fallback
+    return "en-IN";
+  };
+
+  // --- AUDIO LOGIC ---
+  
+  // Cleanup old audio URL when component unmounts or url changes
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
+
+  // Auto-play when audioUrl is updated
+  useEffect(() => {
+    if (audioUrl && audioRef.current) {
+      audioRef.current.load();
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setIsPlaying(true))
+          .catch(e => {
+          console.log("Auto-play prevented or failed:", e);
+          setIsPlaying(false);
+        });
+      }
+    }
+  }, [audioUrl]);
+
+  const generateAudio = async () => {
+    const text = (contentRef.current?.explanation || content.explanation || "").trim();
+    if (!text) {
+      alert("No explanation available to generate audio.");
+      return;
+    }
+
+    setIsGeneratingAudio(true);
+
+    // Get correct language code for backend
+    const ttsLanguage = getTTSLanguageCode(language);
+
+    try {
+      const res = await fetch(`${API_BASE}/generate_tts/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, language: ttsLanguage }),
+      });
+
+      if (!res.ok) throw new Error(`TTS API error ${res.status}`);
+
+      // CHECK CONTENT TYPE to avoid "NotSupportedError"
+      const contentType = res.headers.get("content-type");
+      
+      // If server returned JSON error instead of audio
+      if (contentType && contentType.includes("application/json")) {
+         const json = await res.json();
+         console.error("TTS Server Error:", json);
+         throw new Error("Server returned an error message.");
+      }
+
+      const arrayBuffer = await res.arrayBuffer();
+      
+      // Use the correct MIME type (default to mp3 if unknown, as it's most common)
+      const blobType = contentType || "audio/mpeg"; 
+      
+      const blob = new Blob([arrayBuffer], { type: blobType });
+      const url = URL.createObjectURL(blob);
+      
+      console.log(`Audio generated: ${arrayBuffer.byteLength} bytes, Type: ${blobType}, Lang: ${ttsLanguage}`);
+      setAudioUrl(url); 
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate audio. Is the TTS server running?");
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const handlePlayAudio = () => {
+    if (audioRef.current) {
+        audioRef.current.play()
+          .then(() => setIsPlaying(true))
+          .catch(e => console.error("Playback failed:", e));
+    }
+  };
+
+  const handlePauseAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const handleStopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      try { audioRef.current.currentTime = 0; } catch (e) {}
+      setIsPlaying(false);
+      setAudioCurrent(0);
+    }
+  };
+
+  const onTimeUpdate = () => {
+    if (audioRef.current) setAudioCurrent(audioRef.current.currentTime || 0);
+  };
+
+  const onLoadedMeta = () => {
+    if (audioRef.current) setAudioDuration(audioRef.current.duration || 0);
+  };
+
+  const onSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current) return;
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const pct = Math.min(Math.max(clickX / rect.width, 0), 1);
+    const t = pct * (audioDuration || 0);
+    try { audioRef.current.currentTime = t; } catch (err) {}
+    setAudioCurrent(t);
+  };
+
+  const formatTime = (s: number) => {
+    if (!isFinite(s) || s <= 0) return "0:00";
+    const mins = Math.floor(s / 60);
+    const secs = Math.floor(s % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
+
+  // --- QUIZ LOGIC ---
 
   const handleSelectAnswer = (questionIndex: number, optionIndex: number) => {
     if (showResults) return;
@@ -240,7 +420,7 @@ const LearningTopicPage = () => {
 
         {/* Content Area */}
         <>
-            {/* Explanation - Added md:p-8 for better spacing on desktop */}
+            {/* Explanation */}
             <div className="p-4 md:p-8 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 min-h-[150px]">
               <h2 className="font-semibold text-lg mb-2 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-blue-500" />
@@ -250,6 +430,115 @@ const LearningTopicPage = () => {
                 {content.explanation}
                 {isStreaming && <span className="inline-block w-2 h-5 ml-1 bg-blue-500 animate-pulse align-middle"></span>}
               </p>
+              
+              <div className="mt-8 border-t border-blue-200 dark:border-blue-800 pt-6">
+                {!audioUrl ? (
+                  <Button
+                    onClick={generateAudio}
+                    disabled={isGeneratingAudio || isStreaming || !content.explanation}
+                    className="h-12 w-full sm:w-auto bg-white hover:bg-gray-50 text-blue-600 border border-blue-200 shadow-sm"
+                    variant="outline"
+                  >
+                    {isGeneratingAudio ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating audio...
+                      </>
+                    ) : (
+                      <>
+                        <Headphones className="w-4 h-4 mr-2" />
+                        Listen to Explanation
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  // IMPROVED AUDIO PLAYER UI
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border p-4 shadow-sm flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                          <Volume2 className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm font-medium text-foreground">Audio Explanation ({getLanguageLabel()})</span>
+                       </div>
+                       <div className="text-xs font-mono text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                          {formatTime(audioCurrent)} / {formatTime(audioDuration)}
+                       </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div 
+                        className="w-full h-4 relative cursor-pointer group flex items-center"
+                        onClick={onSeek}
+                    >
+                        {/* Background Track */}
+                        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                             {/* Filled Track */}
+                            <div 
+                                className="h-full bg-blue-500 rounded-full transition-all duration-100 ease-out"
+                                style={{ width: `${(audioDuration ? (audioCurrent / audioDuration) : 0) * 100}%` }}
+                            />
+                        </div>
+                        
+                        {/* Thumb (Visible on hover or drag - simulated position) */}
+                        <div 
+                            className="absolute h-3.5 w-3.5 bg-blue-600 rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 pointer-events-none transform -translate-x-1/2"
+                            style={{ left: `${(audioDuration ? (audioCurrent / audioDuration) : 0) * 100}%` }}
+                        />
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                             {!isPlaying ? (
+                                <Button 
+                                    size="icon" 
+                                    className="rounded-full w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white" 
+                                    onClick={handlePlayAudio}
+                                >
+                                    <Play className="w-5 h-5 ml-0.5" />
+                                </Button>
+                             ) : (
+                                <Button 
+                                    size="icon" 
+                                    className="rounded-full w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white" 
+                                    onClick={handlePauseAudio}
+                                >
+                                    <Pause className="w-5 h-5" />
+                                </Button>
+                             )}
+
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-full hover:bg-red-50 hover:text-red-500"
+                                onClick={handleStopAudio}
+                             >
+                                <Square className="w-4 h-4 fill-current" />
+                             </Button>
+                        </div>
+
+                        <a
+                          href={audioUrl}
+                          download={`${topicName || "explanation"}.mp3`}
+                          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Download Audio"
+                        >
+                          <Download className="w-5 h-5" />
+                        </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+                
+                {/* Audio Element */}
+                <audio
+                  ref={audioRef}
+                  src={audioUrl || ""}
+                  onEnded={() => { console.log("Audio finished"); setIsPlaying(false); }}
+                  onError={(e) => console.error("Audio error event:", e)}
+                  onTimeUpdate={onTimeUpdate}
+                  onLoadedMetadata={onLoadedMeta}
+                  className="hidden"
+                />
             </div>
 
             {/* Practice Questions */}
