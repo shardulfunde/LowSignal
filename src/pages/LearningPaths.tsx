@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -10,6 +13,7 @@ const API_BASE = "https://low-signal-ai.onrender.com";
 const CreateLearningPathPage = () => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
+  const { currentUser } = useAuth();
 
   const [subject, setSubject] = useState("");
   const [age, setAge] = useState(18);
@@ -57,11 +61,37 @@ const CreateLearningPathPage = () => {
       }
 
       const data = await res.json();
+      const pathId = crypto.randomUUID();
+
+      if (currentUser?.uid) {
+        try {
+          await updateDoc(doc(db, "users", currentUser.uid), {
+            learningPaths: arrayUnion({
+              id: pathId,
+              subject: subject.trim(),
+              // Store as objects for future updates
+              topics: data.topics.map((t: string) => ({ 
+                name: t, 
+                explanation: "", 
+                questions: [] 
+              })), 
+              age: age,
+              language: pathLanguage,
+              timestamp: new Date(),
+              focus_areas: focus ? focus.split(",").map((s) => s.trim()) : []
+            })
+          });
+        } catch (saveError) {
+          console.error("Failed to save learning path to history:", saveError);
+          // We continue navigation even if saving fails
+        }
+      }
 
       navigate("/learning/topic", {
         state: {
+          pathId, // Pass ID for updates
           subject,
-          topics: data.topics,
+          topics: data.topics, // Keep as strings for the UI component
           index: 0,
           age,
           language: pathLanguage,

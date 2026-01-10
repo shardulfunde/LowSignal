@@ -1,5 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
+import { db } from "@/lib/firebase"; // Import db
+import { doc, getDoc, updateDoc } from "firebase/firestore"; // Import Firestore methods
 import { Button } from "@/components/ui/button";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
@@ -21,8 +24,9 @@ const API_BASE = "https://low-signal-ai.onrender.com";
 const LearningTopicPage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { currentUser } = useAuth(); // Get current user
 
-  const { subject, topics, index, age, language } = state || {};
+  const { pathId, subject, topics, index, age, language } = state || {}; // Get pathId from state
 
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
@@ -57,6 +61,56 @@ const LearningTopicPage = () => {
       contentRef.current = newState;
       return newState;
     });
+  };
+
+  const saveTopicContent = async () => {
+    if (!currentUser?.uid || !pathId || !topicName) return;
+
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        const paths = userData.learningPaths || [];
+        
+        // Find the specific learning path by ID
+        const pathIndex = paths.findIndex((p: any) => p.id === pathId);
+        
+        if (pathIndex > -1) {
+          const path = paths[pathIndex];
+          // Find the topic within that path
+          // If topics are stored as objects: find by name
+          // If stored as strings (old paths): this might need handling, but we are creating new paths with objects now.
+          // We must ensure 'path.topics' is an array of objects.
+          
+          let updatedTopics = [...path.topics];
+          // Check if topics are strings (backward compatibility or migration if needed, though we just changed creation logic)
+          // Since we just changed creation to objects, we assume objects.
+          
+          const topicIndex = updatedTopics.findIndex((t: any) => t.name === topicName);
+          
+          if (topicIndex > -1) {
+             updatedTopics[topicIndex] = {
+               ...updatedTopics[topicIndex],
+               explanation: contentRef.current.explanation,
+               questions: contentRef.current.practice_questions,
+               // We could also add a 'completed' status here if desired
+             };
+          } else {
+             // Fallback if topic not found by name (shouldn't happen if initialized correctly)
+             console.warn("Topic not found in saved path", topicName);
+          }
+
+          paths[pathIndex] = { ...path, topics: updatedTopics };
+          
+          await updateDoc(userRef, { learningPaths: paths });
+          // console.log("Saved topic content to Firestore");
+        }
+      }
+    } catch (err) {
+      console.error("Error saving topic content:", err);
+    }
   };
 
   // --- TOPIC STREAMING LOGIC ---
@@ -139,6 +193,8 @@ const LearningTopicPage = () => {
 
                 case "done":
                   setIsStreaming(false);
+                  // Trigger Save
+                  saveTopicContent();
                   break;
               }
             } catch (err) {
@@ -647,6 +703,7 @@ const LearningTopicPage = () => {
                   onClick={() =>
                     navigate("/learning/topic", {
                       state: {
+                        pathId,
                         subject,
                         topics,
                         index: index - 1,
@@ -666,6 +723,7 @@ const LearningTopicPage = () => {
                   onClick={() =>
                     navigate("/learning/topic", {
                       state: {
+                        pathId,
                         subject,
                         topics,
                         index: index + 1,
@@ -680,7 +738,7 @@ const LearningTopicPage = () => {
               )}
 
               {index === topics.length - 1 && (
-                <Button className="flex-1 bg-green-600 hover:bg-green-700 h-12" onClick={() => navigate("/")}>
+                <Button className="flex-1 bg-green-600 hover:bg-green-700 h-12" onClick={() => navigate("/profile")}>
                   Complete Path 🎉
                 </Button>
               )}
