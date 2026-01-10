@@ -24,7 +24,7 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
   const navigate = useNavigate();
   const [showLangMenu, setShowLangMenu] = useState(false);
   const { setLanguage, t } = useLanguage();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, signInWithGoogle } = useAuth();
 
   const handleLangSelect = (code: string) => {
     setLanguage(code as Language);
@@ -38,6 +38,15 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
       navigate("/");
     } catch (error) {
       console.error("Failed to log out", error);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithGoogle();
+      navigate("/home");
+    } catch (error) {
+      console.error("Login failed", error);
     }
   };
 
@@ -98,7 +107,7 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
             )}
           </div>
           
-          {currentUser && (
+          {currentUser ? (
             <>
             <Button
               variant="ghost"
@@ -119,6 +128,14 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
               <LogOut className="w-5 h-5" />
             </Button>
             </>
+          ) : (
+            <Button 
+                onClick={handleGoogleLogin} 
+                className="hidden sm:flex rounded-xl font-bold"
+                size="sm"
+            >
+                Start Learning
+            </Button>
           )}
 
           {/* Online/Offline indicator */}

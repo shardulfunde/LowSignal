@@ -42,13 +42,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-
       // Check if user exists in Firestore
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
-
+      
       if (!userSnap.exists()) {
-        // Create new user document
+          // Create new user document
         await setDoc(userRef, {
           uid: user.uid,
           email: user.email,
@@ -62,13 +61,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: serverTimestamp(),
           lastLogin: serverTimestamp(),
         });
-      } else {
+    } else {
         // Update last login
         await setDoc(userRef, {
-          lastLogin: serverTimestamp()
+            lastLogin: serverTimestamp()
         }, { merge: true });
-      }
-    } catch (error) {
+    }
+} catch (error) {
       console.error("Error signing in with Google", error);
       throw error;
     }

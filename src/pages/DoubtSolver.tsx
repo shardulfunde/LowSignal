@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Send, Mic, Wifi } from "lucide-react";
+import { Send, Wifi, Trash2, StopCircle, Play, RotateCcw } from "lucide-react"; // Added icons for better UI
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import ChatMessage from "@/components/ChatMessage";
@@ -15,6 +15,9 @@ const API_BASE = "https://low-signal-ai.onrender.com";
 const DoubtSolver = () => {
   const { language, t } = useLanguage();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  // Ref for auto-scrolling
+  const messagesEndRef = useRef(null);
 
   const initialMessages = [
     {
@@ -32,12 +35,20 @@ const DoubtSolver = () => {
   ];
 
   const [messages, setMessages] = useState(initialMessages);
-  const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const eventSourceRef = useRef(null);
   const [topicInput, setTopicInput] = useState("");
   const [doubtInput, setDoubtInput] = useState("");
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [expanded, setExpanded] = useState({});
+
+  // Auto-scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isStreaming]);
 
   // Reset messages when language changes
   useEffect(() => {
@@ -65,85 +76,16 @@ const DoubtSolver = () => {
     return "EN";
   };
 
-  const handleSend = (text?: string) => {
-    const messageText = text || inputValue;
-    if (!messageText.trim() || isStreaming) return;
-
-    // Add user message
-    setMessages((prev) => [
-      ...prev,
-      { content: messageText, isUser: true, timestamp: "Now" },
-    ]);
-    setInputValue("");
-
-    // Add empty assistant message that we'll fill as tokens arrive
-    setMessages((prev) => [
-      ...prev,
-      { content: "", isUser: false, timestamp: "" },
-    ]);
-
-    setIsStreaming(true);
-
-    // Open SSE connection to backend stream endpoint
-    try {
-      const es = new EventSource(`${API_BASE}/chat/stream?question=${encodeURIComponent(messageText)}`);
-      eventSourceRef.current = es;
-
-      es.onmessage = (e) => {
-        const token = e.data;
-        if (!token) return;
-
-        setMessages((prev) => {
-          const msgs = [...prev];
-          // append token to last assistant message
-          const lastIdx = msgs.length - 1;
-          msgs[lastIdx] = {
-            ...msgs[lastIdx],
-            content: (msgs[lastIdx].content || "") + token,
-            timestamp: "Just now",
-          };
-          return msgs;
-        });
-      };
-
-      es.onerror = () => {
-        // When the server closes the stream EventSource often triggers onerror.
-        if (es.readyState === EventSource.CLOSED) {
-          es.close();
-        } else {
-          es.close();
-        }
-        eventSourceRef.current = null;
-        setIsStreaming(false);
-      };
-    } catch (err) {
-      console.error(err);
-      setIsStreaming(false);
-      setMessages((prev) => [
-        ...prev,
-        { content: "Failed to connect to stream.", isUser: false, timestamp: "" },
-      ]);
-    }
-  };
-
-  // New: Ask using topic + doubt inputs
   const handleAsk = () => {
     if (!topicInput.trim() && !doubtInput.trim()) return;
     if (isStreaming) return;
 
     const combined = `Topic: ${topicInput.trim()}\nDoubt: ${doubtInput.trim()}`.trim();
 
-    // Add user-visible compact message
     setMessages((prev) => [
       ...prev,
       { content: `Topic: ${topicInput.trim()} — Doubt: ${doubtInput.trim()}`, isUser: true, timestamp: "Now" },
-    ]);
-
-    // start streaming the combined prompt
-    // Add empty assistant message
-    setMessages((prev) => [
-      ...prev,
-      { content: "", isUser: false, timestamp: "" },
+      { content: "", isUser: false, timestamp: "" }, // Placeholder for answer
     ]);
 
     setIsStreaming(true);
@@ -183,7 +125,6 @@ const DoubtSolver = () => {
     }
   };
 
-  // Cleanup EventSource on unmount
   useEffect(() => {
     return () => {
       if (eventSourceRef.current) {
@@ -201,11 +142,11 @@ const DoubtSolver = () => {
     setIsStreaming(false);
     setMessages((prev) => [
       ...prev,
-      { content: "[Streaming stopped by user]", isUser: false, timestamp: "" },
+      { content: prev[prev.length - 1].content + "\n\n[Stopped by user]", isUser: false, timestamp: "" },
     ]);
   };
 
-  const copyMessage = async (idx: number) => {
+  const copyMessage = async (idx) => {
     const text = messages[idx]?.content || "";
     try {
       await navigator.clipboard.writeText(text);
@@ -214,153 +155,159 @@ const DoubtSolver = () => {
     }
   };
 
-  const toggleExpand = (idx: number) => {
+  const toggleExpand = (idx) => {
     setExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
+  const clearInputs = () => {
+    setTopicInput(''); 
+    setDoubtInput('');
+  }
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <TopBar language={getLanguageLabel()} isOnline={isOnline} showBack title={t('doubtSolver.title')} />
-
-      {/* Online Required Notice */}
-      {!isOnline && (
-        <div className="px-4 py-2 bg-warning/20 border-b border-warning/30">
-          <p className="text-sm text-center font-semibold text-warning-foreground">
-            {t('doubtSolver.connectToAsk')}
-          </p>
-        </div>
-      )}
-
-      {isOnline && (
-        <div className="px-4 py-2 bg-secondary/10 border-b border-secondary/20 flex items-center justify-center gap-2">
-          <Wifi className="w-4 h-4 text-secondary" />
-          <p className="text-sm font-semibold text-secondary">{t('common.requiresInternet')}</p>
-        </div>
-      )}
-
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 pb-48">
-        <div className="max-w-lg mx-auto space-y-4">
-          {messages.map((msg, index) => (
-            <div key={index}>
-              {msg.isUser ? (
-                <ChatMessage content={msg.content} isUser={true} timestamp={msg.timestamp} />
-              ) : (
-                <div className="flex justify-start animate-slide-up">
-                  <div className="relative max-w-[85%] px-4 py-3 rounded-2xl bg-muted text-foreground rounded-bl-md">
-                      <div className="prose prose-sm max-w-none">
-                        {(() => {
-                          const full = msg.content || "";
-                          const isLong = full.length > 300;
-                          const showFull = !!expanded[index] || !isLong;
-                          const display = showFull ? full : full.slice(0, 300) + "...";
-                          return (
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                              {display}
-                            </ReactMarkdown>
-                          );
-                        })()}
-                      </div>
-
-                      <div className="flex items-center gap-2 mt-2">
-                      <button
-                        className="text-sm text-muted-foreground hover:text-foreground"
-                        onClick={() => copyMessage(index)}
-                        aria-label="Copy answer"
-                      >
-                        Copy
-                      </button>
-                        {msg.content && msg.content.length > 100 && (
-                          <button
-                        className="text-sm text-muted-foreground hover:text-foreground"
-                          onClick={() => toggleExpand(index)}
-                        >
-                          {expanded[index] ? "Collapse" : "Expand"}
-                        </button>
-                        )}
-                      {isStreaming && (
-                        <span className="text-xs text-muted-foreground">Streaming…</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+    // 1. CHANGED: h-[100dvh] ensures it fits mobile screens perfectly without scrollbars on body
+    // flex-col creates the vertical stack
+    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden relative">
+      
+      {/* Top Section */}
+      <div className="shrink-0 z-20">
+        <TopBar language={getLanguageLabel()} isOnline={isOnline} showBack title={t('doubtSolver.title')} />
+        
+        {!isOnline && (
+          <div className="px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20">
+            <p className="text-xs text-center font-medium text-yellow-600 dark:text-yellow-400">
+              {t('doubtSolver.connectToAsk')}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Suggestions */}
-      {messages.length <= 1 && (
-        <div className="px-4 pb-4 max-w-lg mx-auto w-full">
-          <p className="text-sm text-muted-foreground mb-2">{t('doubtSolver.tryAsking')}</p>
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion, index) => (
-              <SuggestionChip
-                key={index}
-                label={suggestion}
-                onClick={() => {
-                  setTopicInput(suggestion);
-                  setDoubtInput("");
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* 2. CHANGED: Chat Area - flex-1 takes all REMAINING space. 
+          overflow-y-auto handles scrolling strictly inside this area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 scroll-smooth">
+        
+        {messages.map((msg, index) => (
+          <div key={index}>
+            {msg.isUser ? (
+              <ChatMessage content={msg.content} isUser={true} timestamp={msg.timestamp} />
+            ) : (
+              <div className="flex justify-start animate-in slide-in-from-left-2 duration-300">
+                <div className="relative max-w-[90%] md:max-w-[80%] px-5 py-4 rounded-3xl rounded-tl-sm bg-muted/50 border border-border/50 text-foreground">
+                  <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
+                    {(() => {
+                      const full = msg.content || "";
+                      const isLong = full.length > 300;
+                      const showFull = !!expanded[index] || !isLong;
+                      const display = showFull ? full : full.slice(0, 300) + "...";
+                      return (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                          {display}
+                        </ReactMarkdown>
+                      );
+                    })()}
+                  </div>
 
-      {/* Topic + Doubt Input Area */}
-      <div className="fixed bottom-20 left-0 right-0 bg-card border-t border-border p-4">
-        <div className="max-w-lg mx-auto space-y-3">
-          <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/10">
+                    <button
+                      className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+                      onClick={() => copyMessage(index)}
+                    >
+                      Copy
+                    </button>
+                    {msg.content && msg.content.length > 300 && (
+                      <button
+                        className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+                        onClick={() => toggleExpand(index)}
+                      >
+                        {expanded[index] ? "Show less" : "Show more"}
+                      </button>
+                    )}
+                    {isStreaming && index === messages.length - 1 && (
+                      <span className="flex items-center gap-1 text-xs text-primary animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary"/> Generating...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Suggestions appear at the bottom of chat if empty */}
+        {messages.length <= 1 && (
+          <div className="mt-8 space-y-3">
+             <p className="text-sm text-muted-foreground text-center">{t('doubtSolver.tryAsking')}</p>
+             <div className="flex flex-wrap justify-center gap-2">
+               {suggestions.map((s, i) => (
+                 <SuggestionChip key={i} label={s} onClick={() => setTopicInput(s)} />
+               ))}
+             </div>
+          </div>
+        )}
+        
+        {/* Invisible element to auto-scroll to */}
+        <div ref={messagesEndRef} className="h-4" />
+      </div>
+
+      {/* 3. CHANGED: Input Area - Removed 'fixed', 'bottom-20'.
+          This is now a natural block element (shrink-0) that sits below the chat. */}
+      <div className="shrink-0 bg-background border-t border-border shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.05)] z-20">
+        <div className="p-4 space-y-3 max-w-3xl mx-auto">
+          
+          <div className="flex gap-2">
             <input
-              className="flex-1 p-3 border rounded-xl"
-              placeholder="Topic (e.g. Photosynthesis)"
+              className="flex-1 px-4 py-2.5 bg-muted/50 border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              placeholder="Topic (e.g. Physics)"
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               disabled={!isOnline}
             />
-            <button
-              className="px-3 py-2 rounded-xl bg-muted hover:bg-muted/80"
-              onClick={() => { setTopicInput(''); setDoubtInput(''); }}
-            >
-              Clear
-            </button>
+            {/* Clear Button */}
+            {(topicInput || doubtInput) && (
+                <Button variant="ghost" size="icon" onClick={clearInputs} className="h-10 w-10 text-muted-foreground">
+                    <Trash2 className="w-4 h-4" />
+                </Button>
+            )}
           </div>
 
-          <textarea
-            className="w-full p-3 border rounded-xl h-28 resize-none"
-            placeholder="Describe your doubt clearly (one sentence) or paste the question/prompt here"
-            value={doubtInput}
-            onChange={(e) => setDoubtInput(e.target.value)}
-            disabled={!isOnline}
-          />
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">{isStreaming ? 'Streaming answer...' : ''}</div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleAsk}
-                disabled={isStreaming || !isOnline || (!topicInput.trim() && !doubtInput.trim())}
-                className="h-12"
-              >
-                Ask
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => { setTopicInput(''); setDoubtInput(''); }}
-                className="h-12"
-              >
-                Reset
-              </Button>
-              {isStreaming && (
-                <Button variant="destructive" onClick={stopStreaming} className="h-12">
-                  Stop
-                </Button>
-              )}
+          <div className="relative">
+            <textarea
+              className="w-full p-4 bg-muted/50 border border-border/50 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px]"
+              placeholder="Type your question here..."
+              value={doubtInput}
+              onChange={(e) => setDoubtInput(e.target.value)}
+              disabled={!isOnline}
+            />
+            
+            {/* Action Buttons positioned nicely */}
+            <div className="absolute bottom-3 right-3 flex gap-2">
+                {isStreaming ? (
+                    <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={stopStreaming}
+                        className="h-8 px-3 rounded-lg shadow-sm"
+                    >
+                        <StopCircle className="w-4 h-4 mr-1.5" /> Stop
+                    </Button>
+                ) : (
+                    <Button 
+                        onClick={handleAsk}
+                        disabled={!isOnline || (!topicInput.trim() && !doubtInput.trim())}
+                        size="sm"
+                        className="h-8 px-4 rounded-lg shadow-sm bg-primary hover:bg-primary/90"
+                    >
+                        Ask <Send className="w-3.5 h-3.5 ml-1.5" />
+                    </Button>
+                )}
             </div>
           </div>
         </div>
+        
+        {/* 4. Spacer for BottomNav. Assuming BottomNav is fixed at bottom, 
+            we need padding here so the input isn't hidden behind it. */}
+        <div className="h-16 md:h-0" /> 
       </div>
 
       <BottomNav />

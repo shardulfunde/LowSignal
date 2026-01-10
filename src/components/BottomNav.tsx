@@ -25,19 +25,7 @@ const BottomNav = () => {
       label: t('bottomNav.chat'), 
       path: "/study-chat", 
       disabled: false // Greyed out as requested
-    },
-    { 
-      icon: Trophy, 
-      label: t('bottomNav.ranks'), 
-      path: "/leaderboard", 
-      disabled: true // Greyed out
-    },
-    { 
-      icon: Users, 
-      label: t('bottomNav.community'), 
-      path: "/community", 
-      disabled: true // Greyed out
-    },
+    }
   ];
 
   return (

@@ -179,42 +179,6 @@ const Home = () => {
           </div>
         </div>
 
-        {/* --- LOCKED / COMING SOON SECTION --- */}
-        <div className="pt-8 pb-4">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 pl-1">
-            Coming Soon
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { icon: FileText, title: t("home.features.learnPdf"), desc: "PDF Tools" },
-              { icon: Trophy, title: t("home.features.villageRanks"), desc: "Leaderboard" },
-              { icon: Users, title: t("home.features.findMentor"), desc: "Connect" },
-              { icon: MessageCircle, title: t("home.features.communityHelp"), desc: "Community" },
-            ].map((feature, idx) => (
-              <div
-                key={idx}
-                className="relative flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-100/50 cursor-not-allowed select-none opacity-70 grayscale transition-opacity hover:opacity-100"
-              >
-                <div className="absolute top-3 right-3 text-slate-300">
-                    <Lock className="w-4 h-4" />
-                </div>
-                <div className="p-2.5 bg-white rounded-xl shadow-sm border border-slate-100">
-                   <feature.icon className="w-5 h-5 text-slate-400" />
-                </div>
-                <div className="flex-1">
-                  <span className="font-bold text-sm block text-slate-500">
-                    {feature.title}
-                  </span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-md mt-1 inline-block">
-                    Soon
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* --- FOOTER / ABOUT LINK (NEW) --- */}
         <div className="mt-8 mb-4 flex flex-col items-center justify-center gap-3 text-center animate-in fade-in">
           {/* Subtle separator */}
