@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { WifiOff, Brain, Zap, ArrowRight, Sparkles, Layers, Command } from "lucide-react";
+import { EyeOff, Brain, Zap, ArrowRight, Sparkles, Layers, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,7 +78,7 @@ const Onboarding = () => {
             {/* Subtext */}
             <p className="text-lg md:text-xl text-muted-foreground font-light max-w-xl mx-auto leading-relaxed text-balance">
               The intelligent workspace that adapts to your learning curve. 
-              Offline-first, AI-driven, and designed for deep focus.
+              Distraction-free, AI-driven, and designed for deep focus.
             </p>
 
             {/* CTA Group */}
@@ -115,11 +115,11 @@ const Onboarding = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-2xl bg-background shadow-sm border border-border/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-                  <WifiOff className="w-6 h-6 text-primary" />
+                  <EyeOff className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold mb-2 tracking-tight">Offline First</h3>
+                <h3 className="text-xl font-bold mb-2 tracking-tight">Distraction Free</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  No internet? No problem. Your entire curriculum syncs locally so you can learn anywhere, anytime.
+                  A minimalist interface designed to help you enter a flow state. No notifications, no clutter, just pure learning.
                 </p>
               </div>
             </div>

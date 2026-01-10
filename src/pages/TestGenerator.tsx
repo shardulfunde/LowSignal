@@ -347,6 +347,64 @@ const TestGenerator = () => {
               </div>
             )}
 
+            {/* Review Answers */}
+            <div className="mt-8 space-y-4">
+              <h3 className="text-xl font-bold px-1">Review Answers</h3>
+              <div className="space-y-4">
+                {questions.map((q, qi) => {
+                  const userChoice = userAnswers[qi];
+                  const isCorrect = userChoice === q.correct_index;
+
+                  return (
+                    <div
+                      key={qi}
+                      className={`p-4 rounded-xl border ${
+                        isCorrect
+                          ? "bg-green-500/5 border-green-500/20"
+                          : "bg-red-500/5 border-red-500/20"
+                      }`}
+                    >
+                      <p className="font-medium mb-3">
+                        <span className="opacity-70 mr-2">{qi + 1}.</span>
+                        {q.question}
+                      </p>
+
+                      <div className="space-y-2">
+                        {q.options.map((opt: any, oi: number) => {
+                          const isSelected = userChoice === oi;
+                          const isTargetCorrect = q.correct_index === oi;
+
+                          let optionClass = "bg-muted/30 text-muted-foreground border-transparent";
+                          let icon = null;
+
+                          if (isTargetCorrect) {
+                            optionClass = "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 font-medium";
+                            icon = <CheckCircle className="w-4 h-4 ml-auto" />;
+                          } else if (isSelected && !isTargetCorrect) {
+                            optionClass = "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-medium";
+                            icon = <XCircle className="w-4 h-4 ml-auto" />;
+                          }
+
+                          return (
+                            <div
+                              key={oi}
+                              className={`flex items-center p-3 rounded-lg text-sm border ${optionClass}`}
+                            >
+                              <span className="w-6 font-mono opacity-70">
+                                {String.fromCharCode(65 + oi)}.
+                              </span>
+                              <span className="flex-1">{opt}</span>
+                              {icon}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <Button
               onClick={() => {
                 setStage("form");

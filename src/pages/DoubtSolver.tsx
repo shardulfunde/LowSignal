@@ -4,18 +4,24 @@ import { Button } from "@/components/ui/button"; // Assuming shadcn or similar
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import TopBar from "@/components/TopBar"; 
-// Assuming you have a BottomNav component, if not, remove the spacing calc
-// import BottomNav from "@/components/BottomNav"; 
+import ReactMarkdown from "react-markdown";
+
+interface Message {
+  id: number;
+  type: "ai" | "user";
+  text: string;
+  topic?: string;
+}
 
 const AskDoubts = () => {
   // Mock Data & State
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     { id: 1, type: "ai", text: "Hello! I'm your AI tutor. Ask me any question about your studies. I can explain concepts, solve problems, and help you understand better." }
   ]);
   const [topic, setTopic] = useState("");
   const [query, setQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -24,26 +30,77 @@ const AskDoubts = () => {
     }
   }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!query.trim()) return;
 
     // Add User Message
-    const userMsg = { id: Date.now(), type: "user", text: query, topic: topic };
+    const userMsg: Message = { id: Date.now(), type: "user", text: query, topic: topic };
     setMessages((prev) => [...prev, userMsg]);
+    const currentQuery = query;
     setQuery("");
     setIsTyping(true);
 
-    // Simulate AI Response
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, type: "ai", text: "This is a simulated response. In a real app, this would be the answer to: " + userMsg.text }
-      ]);
+    // Add AI Message Placeholder
+    const aiMsgId = Date.now() + 1;
+    setMessages((prev) => [
+      ...prev,
+      { id: aiMsgId, type: "ai", text: "", topic: topic }
+    ]);
+
+    try {
+      // Fetch Event Stream
+      const response = await fetch(`https://low-signal-ai.onrender.com/chat/stream?question=${encodeURIComponent(currentQuery)}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to connect to AI");
+      }
+
+      if (!response.body) return;
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const token = line.slice(6);
+            if (token) {
+               setIsTyping(false);
+               setMessages((prev) => 
+                 prev.map((msg) => 
+                   msg.id === aiMsgId 
+                     ? { ...msg, text: msg.text + token } 
+                     : msg
+                 )
+               );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("AI Error:", error);
+      setMessages((prev) => 
+        prev.map((msg) => 
+          msg.id === aiMsgId 
+            ? { ...msg, text: "Sorry, I'm having trouble connecting right now. Please try again later." } 
+            : msg
+        )
+      );
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -177,9 +234,13 @@ const AskDoubts = () => {
                     rounded-2xl p-4 text-sm leading-relaxed shadow-sm
                     ${msg.type === 'user' 
                       ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                      : 'bg-white dark:bg-zinc-900 border border-border/40 rounded-tl-none'}
+                      : 'bg-white dark:bg-zinc-900 border border-border/40 rounded-tl-none prose dark:prose-invert max-w-none'}
                   `}>
-                    {msg.text}
+                    {msg.type === 'ai' ? (
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    ) : (
+                      msg.text
+                    )}
                   </div>
                 </div>
               </div>
