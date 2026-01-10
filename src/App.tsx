@@ -7,7 +7,6 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Onboarding from "./pages/Onboarding";
-import Login from "./pages/Login";
 import Home from "./pages/Home";
 import LearningPaths from "./pages/LearningPaths";
 import LearningTopicPage from "./pages/LearningTopicPage";
@@ -19,6 +18,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
+import Profile from "./pages/Profile";
 import PitchDeck from "./pages/PitchDeck";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -35,7 +35,6 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<Onboarding />} />
-            <Route path="/login" element={<Login />} />
             <Route
               path="/home"
               element={
@@ -113,6 +112,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Community />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

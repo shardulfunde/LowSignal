@@ -1,4 +1,4 @@
-import { Globe, Wifi, WifiOff, ChevronDown, LogOut } from "lucide-react";
+import { Globe, Wifi, WifiOff, ChevronDown, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -99,6 +99,16 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
           </div>
           
           {currentUser && (
+            <>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/profile')}
+              className="text-muted-foreground hover:text-primary transition-colors rounded-xl"
+              title="Profile"
+            >
+              <User className="w-5 h-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -108,6 +118,7 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
             >
               <LogOut className="w-5 h-5" />
             </Button>
+            </>
           )}
 
           {/* Online/Offline indicator */}

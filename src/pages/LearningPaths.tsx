@@ -13,7 +13,7 @@ const CreateLearningPathPage = () => {
 
   const [subject, setSubject] = useState("");
   const [age, setAge] = useState(18);
-  // const [language, setLanguage] = useState<"en" | "hi" | "mr">("en"); // Remvoed local state
+  const [pathLanguage, setPathLanguage] = useState<"en" | "hi" | "mr">(language as "en" | "hi" | "mr");
   const [focus, setFocus] = useState("");
   const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -34,7 +34,7 @@ const CreateLearningPathPage = () => {
           body: JSON.stringify({
             subject: subject.trim(),
             year_old: age,
-            preferred_language: language,
+            preferred_language: pathLanguage,
             focus_areas: focus
               ? focus.split(",").map((s) => s.trim())
               : [],
@@ -64,7 +64,7 @@ const CreateLearningPathPage = () => {
           topics: data.topics,
           index: 0,
           age,
-          language,
+          language: pathLanguage,
         },
       });
     } catch (err) {
@@ -113,6 +113,19 @@ const CreateLearningPathPage = () => {
             value={age}
             onChange={(e) => setAge(Number(e.target.value))}
             />
+        </div>
+
+        <div>
+            <label className="text-sm font-semibold ml-1 mb-1 block">Language</label>
+            <select
+            className="w-full p-3 border rounded-xl bg-background"
+            value={pathLanguage}
+            onChange={(e) => setPathLanguage(e.target.value as "en" | "hi" | "mr")}
+            >
+            <option value="en">English (English)</option>
+            <option value="hi">Hindi (हिंदी)</option>
+            <option value="mr">Marathi (मराठी)</option>
+            </select>
         </div>
 
         <input

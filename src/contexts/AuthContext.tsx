@@ -5,7 +5,8 @@ import {
   signOut, 
   User 
 } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, googleProvider, db } from "@/lib/firebase";
 
 interface AuthContextType {
   currentUser: User | null;
@@ -39,7 +40,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Check if user exists in Firestore
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // Create new user document
+        await setDoc(userRef, {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          age: null,
+          institution: "", // college/school
+          location: "", // City/village
+          learningPaths: [], // json
+          tests: [], // json
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+        });
+      } else {
+        // Update last login
+        await setDoc(userRef, {
+          lastLogin: serverTimestamp()
+        }, { merge: true });
+      }
     } catch (error) {
       console.error("Error signing in with Google", error);
       throw error;
