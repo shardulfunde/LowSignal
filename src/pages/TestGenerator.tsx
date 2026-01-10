@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Play, ChevronLeft } from "lucide-react";
+import { Play, ChevronLeft, Brain, CheckCircle, XCircle, ArrowRight } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -16,15 +16,17 @@ const TestGenerator = () => {
   const [numQuestions, setNumQuestions] = useState(5);
 
   // test state
-  const [questions, setQuestions] = useState([]);
-  const [userAnswers, setUserAnswers] = useState({});
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [stage, setStage] = useState("form"); 
   // form | test | result
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const difficultyMap = {
+  const difficultyMap: Record<string, string> = {
     Easy: "easy",
     Medium: "medium",
     Hard: "hard",
@@ -48,6 +50,7 @@ const TestGenerator = () => {
 
     setLoading(true);
     setError(null);
+    setAnalysisResult(null);
 
     try {
       const res = await fetch(
@@ -74,6 +77,37 @@ const TestGenerator = () => {
       setError("Failed to generate test");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const analyzeTest = async () => {
+    setAnalyzing(true);
+    try {
+      const payload = {
+        topic,
+        language,
+        results: questions.map((q, i) => ({
+          question: q.question,
+          selected_option_index: userAnswers[i] ?? -1,
+          correct_option_index: q.correct_index,
+          options: q.options
+        }))
+      };
+      
+      const res = await fetch("https://low-signal-ai.onrender.com/test/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+      });
+      
+      if(!res.ok) throw new Error("Analysis failed");
+      
+      const data = await res.json();
+      setAnalysisResult(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -216,7 +250,7 @@ const TestGenerator = () => {
         {/* ---------- RESULT ---------- */}
         {stage === "result" && (
           <>
-            <div className="p-6 rounded-xl bg-card border text-center">
+            <div className="p-6 rounded-xl bg-card border text-center mb-6">
               <h2 className="text-2xl font-bold mb-2">
                 {t('testGenerator.result')}
               </h2>
@@ -228,8 +262,97 @@ const TestGenerator = () => {
               </p>
             </div>
 
+            {!analysisResult && (
+              <Button
+                onClick={analyzeTest}
+                disabled={analyzing}
+                className="w-full h-14 text-lg font-bold mb-6 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white shadow-lg shadow-violet-500/20"
+              >
+                  {analyzing ? (
+                    <>
+                      <Brain className="w-5 h-5 mr-2 animate-pulse" />
+                      Analyzing Performance...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-5 h-5 mr-2" />
+                      Analyze My Performance
+                    </>
+                  )}
+              </Button>
+            )}
+
+            {analysisResult && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {/* Score Commentary */}
+                <div className="bg-card/50 backdrop-blur-sm border rounded-xl p-5">
+                  <h3 className="font-bold flex items-center gap-2 mb-2 text-primary">
+                    <Brain className="w-5 h-5" />
+                    AI Insights
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {analysisResult.score_commentary}
+                  </p>
+                </div>
+
+                {/* Strengths & Weaknesses */}
+                <div className="grid grid-cols-1 gap-4">
+                  {analysisResult.strengths.length > 0 && (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                      <h4 className="font-semibold text-green-600 flex items-center gap-2 mb-3">
+                        <CheckCircle className="w-4 h-4" />
+                        Strong Concepts
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {analysisResult.strengths.map((str: string, i: number) => (
+                          <span key={i} className="bg-background px-2.5 py-1 rounded-md text-sm font-medium border shadow-sm">
+                            {str}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {analysisResult.weak_concepts.length > 0 && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                       <h4 className="font-semibold text-red-600 flex items-center gap-2 mb-3">
+                        <XCircle className="w-4 h-4" />
+                        Areas to Improve
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {analysisResult.weak_concepts.map((wk: string, i: number) => (
+                           <span key={i} className="bg-background px-2.5 py-1 rounded-md text-sm font-medium border shadow-sm">
+                            {wk}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Study Plan */}
+                <div className="bg-card border rounded-xl p-5">
+                   <h3 className="font-bold mb-4">Recommended Study Plan</h3>
+                   <div className="space-y-4">
+                      {analysisResult.study_plan.map((step: string, i: number) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold mt-0.5">
+                            {i + 1}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{step}</p>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              </div>
+            )}
+
             <Button
-              onClick={() => setStage("form")}
+              onClick={() => {
+                setStage("form");
+                setAnalysisResult(null);
+                setQuestions([]);
+              }}
               className="w-full mt-6"
               variant="outline"
             >

@@ -1,318 +1,222 @@
-import { useState, useEffect, useRef } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Send, Wifi, Trash2, StopCircle, Play, RotateCcw } from "lucide-react"; // Added icons for better UI
-import TopBar from "@/components/TopBar";
-import BottomNav from "@/components/BottomNav";
-import ChatMessage from "@/components/ChatMessage";
-import SuggestionChip from "@/components/SuggestionChip";
-import { Button } from "@/components/ui/button";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
+import React, { useState, useRef, useEffect } from "react";
+import { Send, Bot, User, Sparkles, Eraser, Paperclip, ArrowUpRight } from "lucide-react";
+import { Button } from "@/components/ui/button"; // Assuming shadcn or similar
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import TopBar from "@/components/TopBar"; 
+// Assuming you have a BottomNav component, if not, remove the spacing calc
+// import BottomNav from "@/components/BottomNav"; 
 
-const API_BASE = "https://low-signal-ai.onrender.com";
+const AskDoubts = () => {
+  // Mock Data & State
+  const [messages, setMessages] = useState([
+    { id: 1, type: "ai", text: "Hello! I'm your AI tutor. Ask me any question about your studies. I can explain concepts, solve problems, and help you understand better." }
+  ]);
+  const [topic, setTopic] = useState("");
+  const [query, setQuery] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef(null);
 
-const DoubtSolver = () => {
-  const { language, t } = useLanguage();
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  
-  // Ref for auto-scrolling
-  const messagesEndRef = useRef(null);
-
-  const initialMessages = [
-    {
-      content: t('doubtSolver.initialMessage'),
-      isUser: false,
-      timestamp: "Now",
-    },
-  ];
-
-  const suggestions = [
-    t('doubtSolver.suggestions.photosynthesis'),
-    t('doubtSolver.suggestions.fractions'),
-    t('doubtSolver.suggestions.electricity'),
-    t('doubtSolver.suggestions.coding'),
-  ];
-
-  const [messages, setMessages] = useState(initialMessages);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const eventSourceRef = useRef(null);
-  const [topicInput, setTopicInput] = useState("");
-  const [doubtInput, setDoubtInput] = useState("");
-  const [expanded, setExpanded] = useState({});
-
-  // Auto-scroll to bottom when messages change
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Auto-scroll to bottom of chat
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isStreaming]);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  // Reset messages when language changes
-  useEffect(() => {
-    setMessages([{
-      content: t('doubtSolver.initialMessage'),
-      isUser: false,
-      timestamp: "Now",
-    }]);
-  }, [language]);
+  const handleSend = () => {
+    if (!query.trim()) return;
 
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+    // Add User Message
+    const userMsg = { id: Date.now(), type: "user", text: query, topic: topic };
+    setMessages((prev) => [...prev, userMsg]);
+    setQuery("");
+    setIsTyping(true);
 
-  const getLanguageLabel = () => {
-    if (language === "hi") return "हिंदी";
-    if (language === "mr") return "मराठी";
-    return "EN";
-  };
-
-  const handleAsk = () => {
-    if (!topicInput.trim() && !doubtInput.trim()) return;
-    if (isStreaming) return;
-
-    const combined = `Topic: ${topicInput.trim()}\nDoubt: ${doubtInput.trim()}`.trim();
-
-    setMessages((prev) => [
-      ...prev,
-      { content: `Topic: ${topicInput.trim()} — Doubt: ${doubtInput.trim()}`, isUser: true, timestamp: "Now" },
-      { content: "", isUser: false, timestamp: "" }, // Placeholder for answer
-    ]);
-
-    setIsStreaming(true);
-
-    try {
-      const es = new EventSource(`${API_BASE}/chat/stream?question=${encodeURIComponent(combined)}`);
-      eventSourceRef.current = es;
-
-      es.onmessage = (e) => {
-        const token = e.data;
-        if (!token) return;
-
-        setMessages((prev) => {
-          const msgs = [...prev];
-          const lastIdx = msgs.length - 1;
-          msgs[lastIdx] = {
-            ...msgs[lastIdx],
-            content: (msgs[lastIdx].content || "") + token,
-            timestamp: "Just now",
-          };
-          return msgs;
-        });
-      };
-
-      es.onerror = () => {
-        es.close();
-        eventSourceRef.current = null;
-        setIsStreaming(false);
-      };
-    } catch (err) {
-      console.error(err);
-      setIsStreaming(false);
+    // Simulate AI Response
+    setTimeout(() => {
       setMessages((prev) => [
         ...prev,
-        { content: "Failed to connect to stream.", isUser: false, timestamp: "" },
+        { id: Date.now() + 1, type: "ai", text: "This is a simulated response. In a real app, this would be the answer to: " + userMsg.text }
       ]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-    };
-  }, []);
-
-  const stopStreaming = () => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-    setIsStreaming(false);
-    setMessages((prev) => [
-      ...prev,
-      { content: prev[prev.length - 1].content + "\n\n[Stopped by user]", isUser: false, timestamp: "" },
-    ]);
-  };
-
-  const copyMessage = async (idx) => {
-    const text = messages[idx]?.content || "";
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      console.error("Copy failed", err);
-    }
-  };
-
-  const toggleExpand = (idx) => {
-    setExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
-  };
-
-  const clearInputs = () => {
-    setTopicInput(''); 
-    setDoubtInput('');
-  }
+  const suggestedQuestions = [
+    "What is photosynthesis?",
+    "Explain fractions simply",
+    "How does electricity work?",
+    "What is coding?"
+  ];
 
   return (
-    // 1. CHANGED: h-[100dvh] ensures it fits mobile screens perfectly without scrollbars on body
-    // flex-col creates the vertical stack
-    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden relative">
-      
-      {/* Top Section */}
-      <div className="shrink-0 z-20">
-        <TopBar language={getLanguageLabel()} isOnline={isOnline} showBack title={t('doubtSolver.title')} />
+    <div className="flex flex-col h-screen bg-background overflow-hidden font-sans">
+      {/* 1. Fixed Top Bar */}
+      <div className="flex-none z-50">
+        <TopBar language="EN" isOnline={true} />
+      </div>
+
+      {/* 2. Main Split Layout 
+          h-[calc(100vh-theme(spacing.20))] accounts for TopBar + BottomNav height 
+          Adjust '140px' based on the actual height of your TopBar + BottomNav
+      */}
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative max-w-7xl mx-auto w-full h-[calc(100vh-140px)] lg:h-[calc(100vh-80px)]">
         
-        {!isOnline && (
-          <div className="px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20">
-            <p className="text-xs text-center font-medium text-yellow-600 dark:text-yellow-400">
-              {t('doubtSolver.connectToAsk')}
+        {/* --- LEFT PANEL: Controls & Inputs --- */}
+        <div className="w-full lg:w-[400px] flex flex-col gap-6 p-6 border-b lg:border-b-0 lg:border-r border-border/40 bg-card/30 backdrop-blur-sm z-20 order-2 lg:order-1 overflow-y-auto">
+          
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Ask a Doubt
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Configure your query for the most accurate AI response.
             </p>
           </div>
-        )}
-      </div>
 
-      {/* 2. CHANGED: Chat Area - flex-1 takes all REMAINING space. 
-          overflow-y-auto handles scrolling strictly inside this area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 scroll-smooth">
-        
-        {messages.map((msg, index) => (
-          <div key={index}>
-            {msg.isUser ? (
-              <ChatMessage content={msg.content} isUser={true} timestamp={msg.timestamp} />
-            ) : (
-              <div className="flex justify-start animate-in slide-in-from-left-2 duration-300">
-                <div className="relative max-w-[90%] md:max-w-[80%] px-5 py-4 rounded-3xl rounded-tl-sm bg-muted/50 border border-border/50 text-foreground">
-                  <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
-                    {(() => {
-                      const full = msg.content || "";
-                      const isLong = full.length > 300;
-                      const showFull = !!expanded[index] || !isLong;
-                      const display = showFull ? full : full.slice(0, 300) + "...";
-                      return (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                          {display}
-                        </ReactMarkdown>
-                      );
-                    })()}
-                  </div>
+          <div className="space-y-4">
+            {/* Topic Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Subject / Topic</label>
+              <Input 
+                placeholder="e.g. Physics, Calculus, History" 
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="bg-background/50 border-primary/10 focus:border-primary/50 transition-all"
+              />
+            </div>
 
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/10">
-                    <button
-                      className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
-                      onClick={() => copyMessage(index)}
-                    >
-                      Copy
-                    </button>
-                    {msg.content && msg.content.length > 300 && (
-                      <button
-                        className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() => toggleExpand(index)}
-                      >
-                        {expanded[index] ? "Show less" : "Show more"}
-                      </button>
-                    )}
-                    {isStreaming && index === messages.length - 1 && (
-                      <span className="flex items-center gap-1 text-xs text-primary animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary"/> Generating...
-                      </span>
-                    )}
-                  </div>
+            {/* Main Query Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Question</label>
+              <div className="relative">
+                <Textarea 
+                  placeholder="Type your doubt here..." 
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-[120px] resize-none bg-background/50 border-primary/10 focus:border-primary/50 pr-2 pb-10 shadow-sm"
+                />
+                {/* Action Bar inside Textarea */}
+                <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center">
+                   <button className="text-muted-foreground hover:text-foreground transition-colors">
+                     <Paperclip className="w-4 h-4" />
+                   </button>
+                   <span className="text-[10px] text-muted-foreground/50 font-medium hidden sm:block">⌘ + Enter to send</span>
                 </div>
               </div>
-            )}
-          </div>
-        ))}
+            </div>
 
-        {/* Suggestions appear at the bottom of chat if empty */}
-        {messages.length <= 1 && (
-          <div className="mt-8 space-y-3">
-             <p className="text-sm text-muted-foreground text-center">{t('doubtSolver.tryAsking')}</p>
-             <div className="flex flex-wrap justify-center gap-2">
-               {suggestions.map((s, i) => (
-                 <SuggestionChip key={i} label={s} onClick={() => setTopicInput(s)} />
-               ))}
-             </div>
-          </div>
-        )}
-        
-        {/* Invisible element to auto-scroll to */}
-        <div ref={messagesEndRef} className="h-4" />
-      </div>
-
-      {/* 3. CHANGED: Input Area - Removed 'fixed', 'bottom-20'.
-          This is now a natural block element (shrink-0) that sits below the chat. */}
-      <div className="shrink-0 bg-background border-t border-border shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.05)] z-20">
-        <div className="p-4 space-y-3 max-w-3xl mx-auto">
-          
-          <div className="flex gap-2">
-            <input
-              className="flex-1 px-4 py-2.5 bg-muted/50 border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              placeholder="Topic (e.g. Physics)"
-              value={topicInput}
-              onChange={(e) => setTopicInput(e.target.value)}
-              disabled={!isOnline}
-            />
-            {/* Clear Button */}
-            {(topicInput || doubtInput) && (
-                <Button variant="ghost" size="icon" onClick={clearInputs} className="h-10 w-10 text-muted-foreground">
-                    <Trash2 className="w-4 h-4" />
-                </Button>
-            )}
+            <Button 
+              onClick={handleSend} 
+              disabled={!query.trim() || isTyping}
+              className="w-full h-12 text-base font-medium shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {isTyping ? "Thinking..." : "Solve Doubt"} 
+              {!isTyping && <ArrowUpRight className="ml-2 w-4 h-4" />}
+            </Button>
           </div>
 
-          <div className="relative">
-            <textarea
-              className="w-full p-4 bg-muted/50 border border-border/50 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px]"
-              placeholder="Type your question here..."
-              value={doubtInput}
-              onChange={(e) => setDoubtInput(e.target.value)}
-              disabled={!isOnline}
-            />
-            
-            {/* Action Buttons positioned nicely */}
-            <div className="absolute bottom-3 right-3 flex gap-2">
-                {isStreaming ? (
-                    <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={stopStreaming}
-                        className="h-8 px-3 rounded-lg shadow-sm"
-                    >
-                        <StopCircle className="w-4 h-4 mr-1.5" /> Stop
-                    </Button>
-                ) : (
-                    <Button 
-                        onClick={handleAsk}
-                        disabled={!isOnline || (!topicInput.trim() && !doubtInput.trim())}
-                        size="sm"
-                        className="h-8 px-4 rounded-lg shadow-sm bg-primary hover:bg-primary/90"
-                    >
-                        Ask <Send className="w-3.5 h-3.5 ml-1.5" />
-                    </Button>
-                )}
+          {/* Quick Suggestions (Moved to Sidebar) */}
+          <div className="mt-auto pt-6 border-t border-border/40">
+            <p className="text-xs font-medium text-muted-foreground mb-3">Or try asking:</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedQuestions.map((q, i) => (
+                <button 
+                  key={i}
+                  onClick={() => setQuery(q)}
+                  className="text-xs text-left px-3 py-2 rounded-lg bg-background border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all truncate max-w-full"
+                >
+                  {q}
+                </button>
+              ))}
             </div>
           </div>
         </div>
-        
-        {/* 4. Spacer for BottomNav. Assuming BottomNav is fixed at bottom, 
-            we need padding here so the input isn't hidden behind it. */}
-        <div className="h-16 md:h-0" /> 
-      </div>
 
-      <BottomNav />
+        {/* --- RIGHT PANEL: Chat Area --- */}
+        <div className="flex-1 flex flex-col bg-background/50 relative order-1 lg:order-2">
+          
+          {/* Messages Container */}
+          <div 
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 scroll-smooth"
+          >
+            {messages.map((msg) => (
+              <div 
+                key={msg.id} 
+                className={`flex gap-4 max-w-3xl ${msg.type === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
+              >
+                {/* Avatar */}
+                <div className={`
+                  w-8 h-8 rounded-full flex items-center justify-center shrink-0 border shadow-sm
+                  ${msg.type === 'ai' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted border-border text-muted-foreground'}
+                `}>
+                  {msg.type === 'ai' ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                </div>
+
+                {/* Bubble */}
+                <div className={`flex flex-col gap-1 min-w-[120px] ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
+                  
+                  {/* Metadata */}
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                    {msg.type === 'user' ? 'You' : 'AI Tutor'}
+                    {msg.topic && <span className="bg-muted px-1.5 py-0.5 rounded text-[9px]">{msg.topic}</span>}
+                  </div>
+
+                  <div className={`
+                    rounded-2xl p-4 text-sm leading-relaxed shadow-sm
+                    ${msg.type === 'user' 
+                      ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                      : 'bg-white dark:bg-zinc-900 border border-border/40 rounded-tl-none'}
+                  `}>
+                    {msg.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="flex gap-4 max-w-3xl animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <Bot className="w-4 h-4 text-primary" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-24 bg-muted rounded" />
+                  <div className="h-10 w-64 bg-muted rounded-xl rounded-tl-none" />
+                </div>
+              </div>
+            )}
+            
+            {/* Spacer for bottom scrolling */}
+            <div className="h-4" />
+          </div>
+
+          {/* Floating 'Clear' or Status actions (Optional) */}
+          <div className="absolute top-4 right-4">
+             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setMessages([])}>
+                <Eraser className="w-4 h-4" />
+             </Button>
+          </div>
+        </div>
+      </main>
+
+      {/* 3. Bottom Navigation Placeholder (Visible on mobile usually) */}
+      <div className="lg:hidden flex-none h-[60px] border-t bg-background z-50">
+         {/* Your existing BottomNavBar component goes here */}
+         <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Bottom Navigation</div>
+      </div>
     </div>
   );
 };
 
-export default DoubtSolver;
+export default AskDoubts;

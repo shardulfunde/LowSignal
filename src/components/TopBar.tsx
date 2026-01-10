@@ -138,23 +138,7 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
             </Button>
           )}
 
-          {/* Online/Offline indicator */}
-          <div
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold touch-target ${isOnline ? "online-badge" : "offline-badge"
-              }`}
-          >
-            {isOnline ? (
-              <>
-                <Wifi className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('topBar.online')}</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-4 h-4 animate-pulse-soft" />
-                <span className="hidden sm:inline">{t('topBar.offline')}</span>
-              </>
-            )}
-          </div>
+
         </div>
       </div>
     </header>
