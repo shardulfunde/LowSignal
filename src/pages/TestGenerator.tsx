@@ -94,7 +94,7 @@ const TestGenerator = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <TopBar
-        title="Test Generator"
+        title={t('testGenerator.title')}
         language={language}
         showBack={stage !== "form"}
         isOnline={isOnline}
@@ -109,13 +109,13 @@ const TestGenerator = () => {
             {/* Topic input */}
             <div className="mb-6">
               <label className="block font-semibold mb-2">
-                Enter Topic
+                {t('testGenerator.enterTopic')}
               </label>
               <input
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="e.g. Fractions, Newton Laws, Grammar"
+                placeholder={t('testGenerator.topicPlaceholder')}
                 className="w-full h-12 px-4 rounded-xl border bg-card"
               />
             </div>
@@ -123,10 +123,10 @@ const TestGenerator = () => {
             {/* Difficulty */}
             <div className="mb-6">
               <label className="block font-semibold mb-2">
-                Difficulty
+                {t('testGenerator.difficultyLevel')}
               </label>
               <div className="flex gap-3">
-                {["Easy", "Medium", "Hard"].map((d) => (
+                {(["Easy", "Medium", "Hard"] as const).map((d) => (
                   <button
                     key={d}
                     onClick={() => setDifficulty(d)}
@@ -136,7 +136,7 @@ const TestGenerator = () => {
                         : "bg-card border"
                     }`}
                   >
-                    {d}
+                    {t(`testGenerator.difficulties.${d.toLowerCase()}`)}
                   </button>
                 ))}
               </div>
@@ -145,7 +145,7 @@ const TestGenerator = () => {
             {/* Number of questions */}
             <div className="mb-6">
               <label className="block font-semibold mb-2">
-                Number of Questions: {numQuestions}
+                {t('testGenerator.numberOfQuestions')}: {numQuestions}
               </label>
               <input
                 type="range"
@@ -167,7 +167,7 @@ const TestGenerator = () => {
               className="w-full h-14 text-lg font-bold"
             >
               <Play className="w-5 h-5 mr-2" />
-              {loading ? "Generating..." : "Generate Test"}
+              {loading ? t('testGenerator.generating') : t('testGenerator.generateTest')}
             </Button>
           </>
         )}
@@ -208,7 +208,7 @@ const TestGenerator = () => {
               onClick={() => setStage("result")}
               className="w-full h-14 text-lg font-bold"
             >
-              Submit Test
+              {t('testGenerator.submitTest')}
             </Button>
           </>
         )}
@@ -218,10 +218,10 @@ const TestGenerator = () => {
           <>
             <div className="p-6 rounded-xl bg-card border text-center">
               <h2 className="text-2xl font-bold mb-2">
-                Result
+                {t('testGenerator.result')}
               </h2>
               <p className="text-lg">
-                Score:{" "}
+                {t('testGenerator.score')}:{" "}
                 <span className="font-bold">
                   {calculateScore()} / {questions.length}
                 </span>
@@ -233,7 +233,7 @@ const TestGenerator = () => {
               className="w-full mt-6"
               variant="outline"
             >
-              Generate New Test
+              {t('testGenerator.generateNewTest')}
             </Button>
           </>
         )}

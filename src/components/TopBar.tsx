@@ -1,8 +1,10 @@
-import { Globe, Wifi, WifiOff, ChevronDown } from "lucide-react";
+import { Globe, Wifi, WifiOff, ChevronDown, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Language } from "@/utils/translations";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface TopBarProps {
   language: string;
@@ -22,11 +24,21 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
   const navigate = useNavigate();
   const [showLangMenu, setShowLangMenu] = useState(false);
   const { setLanguage, t } = useLanguage();
+  const { currentUser, logout } = useAuth();
 
   const handleLangSelect = (code: string) => {
     setLanguage(code as Language);
     setShowLangMenu(false);
     onLanguageChange?.(code);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      console.error("Failed to log out", error);
+    }
   };
 
   return (
@@ -85,6 +97,18 @@ const TopBar = ({ language, isOnline, showBack, title, onLanguageChange }: TopBa
               </>
             )}
           </div>
+          
+          {currentUser && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-destructive transition-colors rounded-xl"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          )}
 
           {/* Online/Offline indicator */}
           <div

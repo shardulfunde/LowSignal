@@ -2,6 +2,7 @@ export type Language = 'en' | 'hi' | 'mr';
 
 export const translations = {
   en: {
+    // ... [Existing English code]
     common: {
       lowSignal: "LowSignal",
       friendlyCompanion: "Your friendly learning companion",
@@ -18,6 +19,8 @@ export const translations = {
       requiresInternet: "Requires internet connection",
       connectInternet: "Connect to internet to use this feature",
       back: "Back",
+      signIn: "Sign In",
+      alreadyAccount: "Already have an account?",
     },
     home: {
       greeting: {
@@ -49,6 +52,15 @@ export const translations = {
     },
     learningPaths: {
       title: "Learning Paths",
+      createTitle: "Create Learning Path",
+      subjectPlaceholder: "Subject (e.g. Kinematics)",
+      ageLabel: "Age",
+      focusAreasPlaceholder: "Focus areas (comma separated)",
+      generate: "Generate",
+      generating: "Generating...",
+      offline: "Offline",
+      enterSubject: "Please enter a subject",
+      failedToGenerate: "Failed to generate learning path",
       badges: "Badges",
       keepGoing: "Keep going!",
       progressMessage: "You're making real progress.",
@@ -118,6 +130,14 @@ export const translations = {
       },
       questionsIn: "Questions will be in:",
       generateTest: "Generate Test",
+      generating: "Generating...",
+      submitTest: "Submit Test",
+      result: "Result",
+      score: "Score",
+      generateNewTest: "Generate New Test",
+      enterTopic: "Enter Topic",
+      topicPlaceholder: "e.g. Fractions, Newton Laws, Grammar",
+      numberOfQuestions: "Number of Questions",
       practiceOffline: "Practice Offline",
       practiceOfflineDesc: "Generate tests now and save them for offline practice later",
       newTest: "New Test",
@@ -213,6 +233,7 @@ export const translations = {
     }
   },
   hi: {
+    // ... [Existing Hindi code]
     common: {
       lowSignal: "लो सिग्नल",
       friendlyCompanion: "आपका मित्रवत शिक्षण साथी",
@@ -268,6 +289,15 @@ export const translations = {
       courses: {
         basicMath: "बुनियादी गणित",
         basicMathDesc: "संख्याएं, भिन्न और रोजमर्रा की गणनाएं",
+      createTitle: "सीखने का रास्ता बनाएं",
+      subjectPlaceholder: "विषय (जैसे गतिकी)",
+      ageLabel: "आयु",
+      focusAreasPlaceholder: "फोकस क्षेत्र (अल्पविराम से अलग करें)",
+      generate: "जेनरेट करें",
+      generating: "बना रहा है...",
+      offline: "ऑफ़लाइन",
+      enterSubject: "कृपया एक विषय दर्ज करें",
+      failedToGenerate: "सीखने का रास्ता बनाने में विफल",
         everydayScience: "दैनिक विज्ञान",
         everydayScienceDesc: "अपने आसपास की दुनिया को समझें",
         introCoding: "कोडिंग का परिचय",
@@ -329,6 +359,14 @@ export const translations = {
       },
       questionsIn: "सवाल इसमें होंगे:",
       generateTest: "टेस्ट जेनरेट करें",
+      generating: "बना रहा है...",
+      submitTest: "टेस्ट जमा करें",
+      result: "परिणाम",
+      score: "स्कोर",
+      generateNewTest: "नया टेस्ट जेनरेट करें",
+      enterTopic: "विषय दर्ज करें",
+      topicPlaceholder: "जैसे भिन्न, न्यूटन के नियम, व्याकरण",
+      numberOfQuestions: "प्रश्नों की संख्या",
       practiceOffline: "ऑफ़लाइन अभ्यास करें",
       practiceOfflineDesc: "अभी टेस्ट जेनरेट करें और बाद में ऑफ़लाइन अभ्यास के लिए उन्हें सहेजें",
       newTest: "नया टेस्ट",
@@ -420,6 +458,234 @@ export const translations = {
         title: "404",
         message: "ओह! पेज नहीं मिला",
         returnHome: "होम पर वापस जाएं",
+      }
+    }
+  },
+  mr: {
+    common: {
+      lowSignal: "लो सिग्नल",
+      friendlyCompanion: "तुमचा मैत्रीपूर्ण शिक्षण सोबती",
+      chooseLanguage: "तुमची भाषा निवडा",
+      pickLanguage: "तुम्हाला सोयीस्कर वाटेल अशी भाषा निवडा",
+      downloadMore: "आणखी भाषा डाउनलोड करा",
+      learnAnytime: "कधीही, कुठेही शिका",
+      worksOffline: "इंटरनेटशिवाय देखील चालते",
+      letsBegin: "सुरुवात करूया",
+      madeWithLove: "प्रेमाने बनवलेले",
+      forRuralLearners: "ग्रामीण विद्यार्थ्यांसाठी",
+      youAreOffline: "तुम्ही ऑफलाइन आहात",
+      offlineMessage: "पण काळजी करू नका, सेव्ह केलेले धडे अजूनही काम करतील!",
+      requiresInternet: "इंटरनेट कनेक्शन आवश्यक आहे",
+      connectInternet: "हे फिचर वापरण्यासाठी इंटरनेटशी कनेक्ट करा",
+      back: "मागे",
+    },
+    home: {
+      greeting: {
+        morning: "शुभ प्रभात",
+        afternoon: "शुभ दुपार",
+        evening: "शुभ संध्या",
+      },
+      readyToLearn: "आज काहीतरी नवीन शिकण्यासाठी तयार आहात?",
+      streak: "दिवसांची स्ट्रीक!",
+      doingGreat: "तुम्ही खूप छान करत आहात — असेच चालू ठेवा!",
+      features: {
+        learningPaths: "शिकण्याचे मार्ग",
+        learningPathsDesc: "गणित, विज्ञान आणि कोडिंगचे धडे",
+        askDoubts: "शंका विचारा",
+        askDoubtsDesc: "तुमच्या प्रश्नांसाठी AI मदत मिळवा",
+        learnPdf: "PDF मधून शिका",
+        learnPdfDesc: "नोट्स अपलोड करा आणि त्या समजून घ्या",
+        aiChat: "AI स्टडी चॅट",
+        aiChatDesc: "संभाषणातून शिका",
+        testYourself: "स्वतःची चाचणी घ्या",
+        testYourselfDesc: "कधीही क्विझचा सराव करा",
+        villageRanks: "गावाची रँकिंग",
+        villageRanksDesc: "तुमच्या गावाची प्रगती पहा",
+        findMentor: "मेंटोर शोधा",
+        findMentorDesc: "मददगार शिक्षकांशी जोडा",
+        communityHelp: "कम्युनिटी मदत",
+        communityHelpDesc: "एकत्र प्रश्न विचारा आणि उत्तरे द्या",
+      }
+    },
+    learningPaths: {
+      title: "शिकण्याचे मार्ग",
+      createTitle: "लर्निंग पाथ तयार करा",
+      subjectPlaceholder: "विषय (उदा. गतिशास्त्र)",
+      ageLabel: "वय",
+      focusAreasPlaceholder: "फोकस क्षेत्र (स्वल्पविरामाने वेगळे करा)",
+      generate: "तयार करा",
+      generating: "तयार करत आहे...",
+      offline: "ऑफलाइन",
+      enterSubject: "कृपया विषय प्रविष्ट करा",
+      failedToGenerate: "लर्निंग पाथ तयार करण्यात अयशस्वी",
+      badges: "बॅजेस",
+      keepGoing: "चालू ठेवा!",
+      progressMessage: "तुम्ही खरोखर प्रगती करत आहात.",
+      continueLearning: "शिकणे सुरू ठेवा",
+      yourCourses: "तुमचे कोर्सेस",
+      courses: {
+        basicMath: "मूलभूत गणित",
+        basicMathDesc: "संख्या, अपूर्णांक आणि दैनंदिन गणना",
+        everydayScience: "दैनंदिन विज्ञान",
+        everydayScienceDesc: "आपल्या सभोवतालचे जग समजून घ्या",
+        introCoding: "कोडिंगची ओळख",
+        introCodingDesc: "प्रोग्रामरसारखा विचार करायला शिका",
+        englishBasics: "इंग्रजीची मूळ तत्त्वे",
+        englishBasicsDesc: "वाचन, लेखन आणि बोलण्याचे कौशल्य",
+      }
+    },
+    doubtSolver: {
+      title: "शंका विचारा",
+      connectToAsk: "प्रश्न विचारण्यासाठी इंटरनेटशी कनेक्ट करा",
+      tryAsking: "हे विचारून पहा:",
+      typeQuestion: "तुमचा प्रश्न टाईप करा...",
+      initialMessage: "नमस्कार! मी तुमचा AI शिक्षक आहे. मला तुमच्या अभ्यासाबद्दल कोणताही प्रश्न विचारा. मी संकल्पना स्पष्ट करू शकतो, समस्या सोडवू शकतो आणि तुम्हाला अधिक चांगल्या प्रकारे समजण्यास मदत करू शकतो.",
+      suggestions: {
+        photosynthesis: "प्रकाश संश्लेषण म्हणजे काय?",
+        fractions: "अपूर्णांक सोप्या भाषेत सांगा",
+        electricity: "वीज कशी काम करते?",
+        coding: "कोडिंग म्हणजे काय?",
+      }
+    },
+    pdfLearning: {
+      title: "PDF मधून शिका",
+      aiRequiresInternet: "AI फिचर्ससाठी इंटरनेट आवश्यक आहे",
+      uploadPdf: "PDF अपलोड करा",
+      uploadDesc: "AI सोबत शिकण्यासाठी तुमचे पुस्तक किंवा नोट्स अपलोड करा",
+      chooseFile: "PDF फाईल निवडा",
+      yourPdfs: "तुमच्या PDF",
+      pages: "पाने",
+      explainPage: "हे पान समजावून सांगा",
+      explainPageDesc: "सोपे स्पष्टीकरण मिळवा",
+      summarize: "सारांश करा",
+      summarizeDesc: "महत्वाचे मुद्दे मिळवा",
+      askQuestions: "प्रश्न विचारा",
+      askQuestionsDesc: "तुमची समज तपासा",
+      backToPdfs: "← PDF वर परत जा",
+    },
+    aiChat: {
+      title: "AI स्टडी चॅट",
+      connectToChat: "AI सोबत चॅट करण्यासाठी इंटरनेटशी कनेक्ट करा",
+      placeholder: "तुम्हाला काय शिकायचे आहे?",
+      initialMessage: "नमस्कार! 😊 मी तुमचा मैत्रीपूर्ण अभ्यासाचा सोबती आहे. मी तुम्हाला काहीही शिकण्यास मदत करू शकतो. आज तुम्हाला कोणत्या विषयावर चर्चा करायला आवडेल?",
+      suggestions: {
+        explain: "सोप्या भाषेत सांगा",
+        examples: "उदाहरणे द्या",
+        questions: "मला प्रश्न विचारा",
+        fun: "हे मजेदार बनवा",
+      }
+    },
+    testGenerator: {
+      title: "टेस्ट जनरेटर",
+      selectTopic: "विषय निवडा",
+      chooseTopic: "एक विषय निवडा",
+      generating: "बनवत आहे...",
+      submitTest: "टेस्ट जमा करा",
+      result: "निकाल",
+      score: "गुण",
+      generateNewTest: "नवीन टेस्ट तयार करा",
+      enterTopic: "विषय प्रविष्ट करा",
+      topicPlaceholder: "उदा. अपूर्णांक, न्यूटनचे नियम, व्याकरण",
+      numberOfQuestions: "प्रश्नांची संख्या",
+      difficultyLevel: "काठिण्य पातळी",
+      difficulties: {
+        easy: "सोपे",
+        medium: "मध्यम",
+        hard: "कठीण",
+      },
+      questionsIn: "प्रश्न यामध्ये असतील:",
+      generateTest: "टेस्ट तयार करा",
+      practiceOffline: "ऑफलाइन सराव करा",
+      practiceOfflineDesc: "आता टेस्ट तयार करा आणि नंतर ऑफलाइन सरावासाठी सेव्ह करा",
+      newTest: "नवीन टेस्ट",
+      saveOffline: "ऑफलाइन सेव्ह करा",
+      topics: {
+        math: "मूलभूत गणित",
+        fractions: "अपूर्णांक",
+        science: "दैनंदिन विज्ञान",
+        plants: "वनस्पती आणि प्राणी",
+        electricity: "वीज",
+        english: "इंग्रजी व्याकरण",
+      }
+    },
+    leaderboard: {
+      title: "गावाची रँकिंग",
+      yourVillage: "तुमचे गाव",
+      pointsToNext: "#3 साठी फक्त 750 गुण बाकी!",
+      keepLearning: "शिकत राहा — प्रत्येक धडा तुमच्या गावाला वर जाण्यास मदत करतो",
+      thisMonth: "या महिन्यात",
+      updateNote: "रँकिंग दर रविवारी मध्यरात्री अपडेट होते",
+      students: "विद्यार्थी",
+    },
+    community: {
+      title: "समुदाय",
+      tabs: {
+        mentors: "मेंटोर",
+        questions: "प्रश्न",
+      },
+      mentorsDesc: "स्वयंसेवक शिक्षकांशी जोडा जे तुमच्या अभ्यासात मदत करू शकतात",
+      questionsDesc: "इतरांना मदत करा किंवा समुदायाकडून मदत मिळवा",
+      askQuestion: "प्रश्न विचारा",
+      studentsHelped: "विद्यार्थ्यांना मदत केली",
+    },
+    aiResponses: {
+      chat: {
+        explain: "नक्कीच! मी हे तुमच्यासाठी टप्प्याटप्प्याने समजावून सांगतो. सर्वात आधी, आपण मूळ संकल्पना समजून घेऊया...",
+        example: "येथे एक वास्तविक जीवनातील उदाहरण आहे जे तुम्हाला पटू शकेल:\n\nकल्पना करा की तुम्ही बाजारात भाजीपाला खरेदी करत आहात...",
+        question: "छान विचार! तुमच्यासाठी येथे एक प्रश्न आहे:\n\nजर तुमच्याकडे 3 सफरचंद आहेत आणि तुमच्या मित्राने तुम्हाला आणखी 2 दिले, तर आता तुमच्याकडे किती सफरचंद आहेत?",
+        default: "हे मनोरंजक आहे! मी तुम्हाला \"{0}\" अधिक चांगल्या प्रकारे समजून घेण्यास मदत करतो. मी कोणत्या पैलूवर लक्ष केंद्रित करावे असे तुम्हाला वाटते?",
+      },
+      doubt: {
+        default: "उत्तम प्रश्न! मी \"{0}\" सोप्या भाषेत सांगतो...\n\nही एक अशी संकल्पना आहे जी आपल्या दैनंदिन जीवनात गोष्टी कशा चालतात हे समजण्यास मदत करते. तुम्हाला उदाहरण हवे आहे की मी हे आणखी स्पष्ट करू?",
+      }
+    },
+    bottomNav: {
+      home: "होम",
+      learn: "शिका",
+      chat: "चॅट",
+      ranks: "रँक",
+      community: "कम्युनिटी",
+    },
+    topBar: {
+      online: "ऑनलाइन",
+      offline: "ऑफलाइन",
+    },
+    components: {
+      featureCard: {
+        offline: "ऑफलाइन",
+        online: "ऑनलाइन",
+      },
+      learningPathCard: {
+        saved: "सेव्ह केले",
+        of: "पैकी",
+        lessons: "धडे",
+        days: "दिवस",
+        streak: "स्ट्रीक",
+        badges: "बॅजेस",
+        encouragement: {
+          start: "सुरुवात करण्यास तयार? 🌱",
+          great: "छान सुरुवात! चालू ठेवा 💪",
+          amazing: "तुम्ही अप्रतिम करत आहात! ✨",
+          almost: "जवळपास झालेच! 🎯",
+          finish: "पूर्ण करण्याच्या अगदी जवळ! 🏆",
+        }
+      },
+      leaderboardItem: {
+        learners: "शिकणारे",
+        you: "तुम्ही",
+        points: "गुण",
+      },
+      mentorCard: {
+        helped: "मदत केली",
+        message: "मेसेज",
+      },
+      communityQuestion: {
+        replies: "उत्तरे",
+      },
+      notFound: {
+        title: "404",
+        message: "अरेरे! पेज सापडले नाही",
+        returnHome: "होम पेजवर जा",
       }
     }
   }

@@ -26,13 +26,11 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
     const t = (path: string): string => {
         const keys = path.split('.');
-        // Use English for Marathi since translations are not yet available
-        const effectiveLanguage = language === 'mr' ? 'en' : language;
-        let current: any = translations[effectiveLanguage];
+        let current: any = translations[language];
 
         for (const key of keys) {
             if (current[key] === undefined) {
-                console.warn(`Translation missing for key: ${path} in language: ${effectiveLanguage}`);
+                console.warn(`Translation missing for key: ${path} in language: ${language}`);
                 // Fallback to English
                 let fallback: any = translations['en'];
                 for (const k of keys) {

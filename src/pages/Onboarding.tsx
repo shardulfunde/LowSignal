@@ -75,6 +75,18 @@ const Onboarding = () => {
           {t('common.letsBegin')}
         </Button>
 
+        <div className="text-center mt-4">
+          <p className="text-sm text-muted-foreground">
+            {t('common.alreadyAccount')}{" "}
+            <button 
+              onClick={() => navigate('/login')}
+              className="text-primary font-semibold hover:underline"
+            >
+              {t('common.signIn')}
+            </button>
+          </p>
+        </div>
+
         <p className="text-center text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1">
           {t('common.madeWithLove')} <Heart className="w-3 h-3 text-destructive" /> {t('common.forRuralLearners')}
         </p>

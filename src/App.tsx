@@ -4,7 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Onboarding from "./pages/Onboarding";
+import Login from "./pages/Login";
 import Home from "./pages/Home";
 import LearningPaths from "./pages/LearningPaths";
 import LearningTopicPage from "./pages/LearningTopicPage";
@@ -17,28 +20,102 @@ import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import PitchDeck from "./pages/PitchDeck";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
+      <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Onboarding />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/learning-paths" element={<LearningPaths />} />
-            <Route path="/learning-paths/:id" element={<LearningPaths />} />
-            <Route path="/learning/topic" element={<LearningTopicPage />} />
-            <Route path="/doubt-solver" element={<DoubtSolver />} />
-            <Route path="/pdf-learning" element={<PDFLearning />} />
-            <Route path="/study-chat" element={<AIStudyChat />} />
-            <Route path="/test-generator" element={<TestGenerator />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/community" element={<Community />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/learning-paths"
+              element={
+                <ProtectedRoute>
+                  <LearningPaths />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/learning-paths/:id"
+              element={
+                <ProtectedRoute>
+                  <LearningPaths />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/learning/topic"
+              element={
+                <ProtectedRoute>
+                  <LearningTopicPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/doubt-solver"
+              element={
+                <ProtectedRoute>
+                  <DoubtSolver />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pdf-learning"
+              element={
+                <ProtectedRoute>
+                  <PDFLearning />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/study-chat"
+              element={
+                <ProtectedRoute>
+                  <AIStudyChat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test-generator"
+              element={
+                <ProtectedRoute>
+                  <TestGenerator />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaderboard"
+              element={
+                <ProtectedRoute>
+                  <Leaderboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/community"
+              element={
+                <ProtectedRoute>
+                  <Community />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/about" element={<About />} />
             <Route path="/pitch-deck" element={<PitchDeck />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
@@ -46,6 +123,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </AuthProvider>
     </LanguageProvider>
   </QueryClientProvider>
 );
