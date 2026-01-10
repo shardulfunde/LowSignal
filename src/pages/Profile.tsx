@@ -3,10 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import TopBar from "@/components/TopBar";
+import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { User, MapPin, School, Calendar, Mail, Save, Loader2, Edit2, X, BookOpen, FileText } from "lucide-react";
+import { User, MapPin, School, Calendar, Mail, Save, Loader2, Edit2, X, BookOpen, FileText, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserProfile {
@@ -27,6 +28,7 @@ interface StoredItem {
 
 const Profile = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -318,10 +320,21 @@ const Profile = () => {
           {learningPaths.length > 0 ? (
             <div className="space-y-3">
               {learningPaths.map((path, idx) => (
-                <div key={idx} className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <p className="font-semibold text-slate-800">{path.subject || path.topic || `Path #${idx + 1}`}</p>
+                <div 
+                  key={idx} 
+                  onClick={() => path.id && navigate(`/saved-path/${path.id}`)}
+                  className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-slate-800 group-hover:text-primary transition-colors">
+                      {path.subject || path.topic || `Path #${idx + 1}`}
+                    </p>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
+                  </div>
                   {path.timestamp && (
-                    <p className="text-xs text-slate-500 mt-1">Generated {new Date(path.timestamp && path.timestamp.seconds ? path.timestamp.seconds * 1000 : Date.now()).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Generated {new Date(path.timestamp && path.timestamp.seconds ? path.timestamp.seconds * 1000 : Date.now()).toLocaleDateString()}
+                    </p>
                   )}
                 </div>
               ))}

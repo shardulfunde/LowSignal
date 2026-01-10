@@ -19,6 +19,7 @@ import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import Profile from "./pages/Profile";
+import SavedLearningPath from "./pages/SavedLearningPath";
 import PitchDeck from "./pages/PitchDeck";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -120,6 +121,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/saved-path/:id"
+              element={
+                <ProtectedRoute>
+                  <SavedLearningPath />
                 </ProtectedRoute>
               }
             />
