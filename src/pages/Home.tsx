@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BookOpen,
   MessageCircle,
@@ -23,6 +24,7 @@ import { Link } from "react-router-dom";
 
 const Home = () => {
   const { language, t } = useLanguage();
+  const { currentUser } = useAuth();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ const Home = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
-              {getGreeting()}, <span className="text-primary">Student</span>
+              {getGreeting()}, <span className="text-primary">{currentUser?.displayName?.split(' ')[0] || "Student"}</span>
             </h1>
             <p className="text-slate-500 font-medium text-sm md:text-base">
               Let's make some progress today.

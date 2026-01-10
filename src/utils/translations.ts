@@ -19,6 +19,8 @@ export const translations = {
       requiresInternet: "Requires internet connection",
       connectInternet: "Connect to internet to use this feature",
       back: "Back",
+      signIn: "Sign In",
+      alreadyAccount: "Already have an account?",
     },
     home: {
       greeting: {
