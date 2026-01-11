@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { EyeOff, Brain, Zap, ArrowRight, Sparkles, Layers, Command } from "lucide-react";
+import { EyeOff, Brain, Zap, ArrowRight, Sparkles, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -161,7 +161,7 @@ const Onboarding = () => {
       <footer className="py-6 text-center relative z-10 border-t border-border/40 bg-background/50 backdrop-blur-xl">
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-xs font-medium text-muted-foreground/60">
           <span className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer">
-            <Command className="w-3 h-3" /> Press ⌘K to search
+            Linear Depression
           </span>
           <span className="hidden md:inline">•</span>
           <span className="hover:text-foreground transition-colors cursor-pointer">Privacy Policy</span>
