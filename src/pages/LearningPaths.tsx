@@ -8,7 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const API_BASE = "https://low-signal-ai.onrender.com";
+const API_BASE = "https://low-signal-ai-1ay5.onrender.com";
 
 const CreateLearningPathPage = () => {
   const navigate = useNavigate();
