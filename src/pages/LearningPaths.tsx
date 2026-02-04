@@ -8,7 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const API_BASE = "https://low-signal-ai-1ay5.onrender.com";
+const API_BASE = "https://low-signal-ai.onrender.com";
 
 const CreateLearningPathPage = () => {
   const navigate = useNavigate();
@@ -30,6 +30,7 @@ const CreateLearningPathPage = () => {
 
     setLoading(true);
     try {
+      console.log("Fetching from:", `${API_BASE}/learning_path/generate/topic_list`);
       const res = await fetch(
         `${API_BASE}/learning_path/generate/topic_list`,
         {
@@ -98,8 +99,12 @@ const CreateLearningPathPage = () => {
         },
       });
     } catch (err) {
-      console.error(err);
-      alert(t('learningPaths.failedToGenerate'));
+      console.error("Fetch error:", err);
+      if (err instanceof TypeError && err.message === "Failed to fetch") {
+        alert("Cannot connect to backend. Please check:\n1. Backend is running\n2. No CORS issues\n3. Network connection");
+      } else {
+        alert(t('learningPaths.failedToGenerate'));
+      }
     } finally {
       setLoading(false);
     }

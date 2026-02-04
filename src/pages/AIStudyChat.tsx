@@ -84,7 +84,7 @@ const AIStudyChat = () => {
     setInputValue("");
 
     const url =
-      "https://low-signal-ai-1ay5.onrender.com/chat/stream?question=" +
+      "https://low-signal-ai.onrender.com/chat/stream?question=" +
       encodeURIComponent(messageText);
 
     const eventSource = new EventSource(url);

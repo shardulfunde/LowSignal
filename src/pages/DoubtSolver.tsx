@@ -49,7 +49,7 @@ const AskDoubts = () => {
 
     try {
       // Fetch Event Stream
-      const response = await fetch(`https://low-signal-ai-1ay5.onrender.com/chat/stream?question=${encodeURIComponent(currentQuery)}`);
+      const response = await fetch(`https://low-signal-ai.onrender.com/chat/stream?question=${encodeURIComponent(currentQuery)}`);
       
       if (!response.ok) {
         throw new Error("Failed to connect to AI");

@@ -54,7 +54,7 @@ const TestGenerator = () => {
 
     try {
       const res = await fetch(
-        "https://low-signal-ai-1ay5.onrender.com/test/generate",
+        "https://low-signal-ai.onrender.com/test/generate",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -94,7 +94,7 @@ const TestGenerator = () => {
         }))
       };
       
-      const res = await fetch("https://low-signal-ai-1ay5.onrender.com/test/analyze", {
+      const res = await fetch("https://low-signal-ai.onrender.com/test/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)

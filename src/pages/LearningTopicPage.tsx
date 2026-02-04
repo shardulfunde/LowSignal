@@ -24,8 +24,8 @@ import {
 } from "lucide-react";
 
 // Use the production URL for both general API and Feedback API
-const API_BASE = "https://low-signal-ai-1ay5.onrender.com";
-const FEEDBACK_API_BASE = "https://low-signal-ai-1ay5.onrender.com"; 
+const API_BASE = "https://low-signal-ai.onrender.com";
+const FEEDBACK_API_BASE = "https://low-signal-ai.onrender.com"; 
 
 const LearningTopicPage = () => {
   const { state } = useLocation();
